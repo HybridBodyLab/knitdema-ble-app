@@ -1,5 +1,6 @@
 import React from "react"
 import { Card } from "./ui/card"
+import { CheckCircle, XCircle, AlertTriangle } from "lucide-react"
 
 interface StatusPanelProps {
 	connectionStatus: string
@@ -12,34 +13,27 @@ const StatusPanel: React.FC<StatusPanelProps> = ({
 	isRunning,
 	errorMessage,
 }) => (
-	<>
-		<Card className="mb-6 bg-white p-4 dark:bg-gray-800">
-			<p className="text-lg font-semibold text-gray-700 dark:text-gray-300">
-				Status:{" "}
-				<span className="text-blue-600 dark:text-blue-400">
-					{connectionStatus}
-				</span>
-			</p>
-			<p className="text-lg font-semibold text-gray-700 dark:text-gray-300">
-				Board Running:{" "}
-				<span
-					className={`${isRunning ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
-				>
-					{isRunning ? "Yes" : "No"}
-				</span>
-			</p>
-		</Card>
-
+	<Card className="mb-4 p-3 text-sm">
+		<div className="flex items-center justify-between">
+			<span>
+				Status: <span className="text-blue-400">{connectionStatus}</span>
+			</span>
+			<span className="flex items-center ">
+				{isRunning ? (
+					<CheckCircle className="mr-1 size-4 text-green-400" />
+				) : (
+					<XCircle className="mr-1 size-4 text-red-400" />
+				)}
+				{isRunning ? "Running" : "Stopped"}
+			</span>
+		</div>
 		{errorMessage && (
-			<div
-				className="mb-6 rounded-md border-l-4 border-red-500 bg-red-100 p-4 text-red-700 dark:bg-red-900 dark:text-red-300"
-				role="alert"
-			>
-				<p className="font-bold">Error</p>
-				<p>{errorMessage}</p>
+			<div className="mt-2 flex items-center text-red-400">
+				<AlertTriangle className="mr-1 h-4 w-4" />
+				<span>{errorMessage}</span>
 			</div>
 		)}
-	</>
+	</Card>
 )
 
 export default StatusPanel

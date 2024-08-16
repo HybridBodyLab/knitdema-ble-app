@@ -3,8 +3,8 @@ import { CHARACTERISTIC_UUIDS, CharacteristicKeys } from "@/constants"
 import { useBluetoothConnection } from "@/hooks/use-bluetooth-connection"
 import { Button } from "./ui/button"
 import { Card } from "./ui/card"
-import DataDisplay from "./data-display"
 import StatusPanel from "./status-panel"
+import SMATable from "./sma-table"
 
 const BleGUI: React.FC = () => {
 	const [receivedData, setReceivedData] = useState<
@@ -86,13 +86,27 @@ const BleGUI: React.FC = () => {
 		}
 	}, [isRunning, readCharacteristics])
 
-	return (
-		<div className="flex min-h-screen flex-col items-center bg-gradient-to-b from-gray-900 to-black p-8">
-			<h1 className="mb-8 text-4xl font-extrabold text-white">
-				BLE Control Panel
-			</h1>
+	const transformDataForSMATable = (
+		data: Record<CharacteristicKeys, string>,
+	) => {
+		const smaData = []
+		for (let i = 0; i < 7; i++) {
+			smaData.push({
+				number: `SMA${i + 1}`,
+				index: i < 6 ? (data.index[i] === "1" ? "high" : "disabled") : "N/A",
+				middle: i < 6 ? (data.middle[i] === "1" ? "high" : "disabled") : "N/A",
+				ring: i < 6 ? (data.ring[i] === "1" ? "high" : "disabled") : "N/A",
+				little: i < 6 ? (data.pinky[i] === "1" ? "high" : "disabled") : "N/A",
+				thumb: i < 6 ? (data.thumb[i] === "1" ? "high" : "disabled") : "N/A",
+				palm: data.palm[i] === "1" ? "high" : "disabled",
+			})
+		}
+		return smaData
+	}
 
-			<Card className="w-full max-w-3xl rounded-lg bg-gray-800 text-white shadow-md">
+	return (
+		<div className="flex min-h-screen flex-col items-center  p-8">
+			<Card className="w-full max-w-3xl rounded-lg p-6 text-white shadow-md">
 				<div className="mb-6 flex flex-col items-center justify-between space-y-4 sm:flex-row sm:space-y-0">
 					<Button
 						onClick={isConnected ? disconnectBle : connectToBle}
@@ -123,14 +137,14 @@ const BleGUI: React.FC = () => {
 						</div>
 					)}
 				</div>
-
 				<StatusPanel
 					connectionStatus={connectionStatus}
 					isRunning={isRunning}
 					errorMessage={errorMessage}
 				/>
-
-				<DataDisplay receivedData={receivedData} />
+				<div className="mt-6">
+					<SMATable smaData={transformDataForSMATable(receivedData)} />
+				</div>
 			</Card>
 		</div>
 	)
