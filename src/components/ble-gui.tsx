@@ -87,19 +87,19 @@ const BleGUI: React.FC = () => {
 	}, [isRunning, readCharacteristics])
 
 	return (
-		<div className="flex min-h-screen flex-col items-center bg-gradient-to-b from-blue-100 to-blue-200 p-8">
-			<h1 className="shadow-text mb-8 text-4xl font-bold text-blue-800">
+		<div className="flex min-h-screen flex-col items-center bg-gradient-to-b from-gray-900 to-black p-8">
+			<h1 className="mb-8 text-4xl font-extrabold text-white">
 				BLE Control Panel
 			</h1>
 
-			<Card className="w-full max-w-3xl">
+			<Card className="w-full max-w-3xl rounded-lg bg-gray-800 text-white shadow-md">
 				<div className="mb-6 flex flex-col items-center justify-between space-y-4 sm:flex-row sm:space-y-0">
 					<Button
 						onClick={isConnected ? disconnectBle : connectToBle}
-						className={`w-full sm:w-auto ${
+						className={`w-full rounded-md border border-gray-600 px-4 py-2 text-white sm:w-auto ${
 							isConnected
-								? "bg-red-500 hover:bg-red-600"
-								: "bg-blue-500 hover:bg-blue-600"
+								? "bg-red-600 hover:bg-red-700"
+								: "bg-blue-600 hover:bg-blue-700"
 						}`}
 					>
 						{isConnected ? "Disconnect" : "Connect"}
@@ -108,14 +108,14 @@ const BleGUI: React.FC = () => {
 						<div className="flex space-x-4">
 							<Button
 								onClick={startBoard}
-								className="bg-green-500 hover:bg-green-600"
+								className="rounded-md border border-gray-600 bg-green-600 px-4 py-2 text-white hover:bg-green-700"
 								disabled={isRunning}
 							>
 								Start Board
 							</Button>
 							<Button
 								onClick={stopBoard}
-								className="bg-yellow-500 hover:bg-yellow-600"
+								className="rounded-md border border-gray-600 bg-red-600 px-4 py-2 text-white hover:bg-red-700"
 								disabled={!isRunning}
 							>
 								Stop Board
