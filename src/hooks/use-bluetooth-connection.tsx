@@ -59,16 +59,39 @@ export const useBluetoothConnection = () => {
 		}
 	}
 
-	const disconnectBle = async () => {
-		if (deviceRef.current && deviceRef.current.gatt?.connected) {
-			await deviceRef.current.gatt.disconnect()
+	const readCharacteristic = async (key: CharacteristicKeys) => {
+		if (!characteristicsRef.current) {
+			return null
 		}
-		setIsConnected(false)
-		setIsRunning(false)
-		setConnectionStatus("Disconnected")
-		characteristicsRef.current = null
-		deviceRef.current = null
+		const characteristic = characteristicsRef.current[key]
+		try {
+			const value = await characteristic.readValue()
+			const decoder = new TextDecoder("utf-8")
+			return decoder.decode(value)
+		} catch (error) {
+			setErrorMessage(`Error reading ${key}: ${(error as Error).message}`)
+			return null
+		}
 	}
+
+	const readAllCharacteristics = useCallback(async () => {
+		if (!characteristicsRef.current) {
+			setErrorMessage("Not connected to the board")
+			return null
+		}
+		const results: Partial<Record<CharacteristicKeys, string>> = {}
+		for (const key of Object.keys(
+			CHARACTERISTIC_UUIDS,
+		) as CharacteristicKeys[]) {
+			if (key !== "led" && key !== "start") {
+				const value = await readCharacteristic(key)
+				if (value) {
+					results[key] = value
+				}
+			}
+		}
+		return results
+	}, [])
 
 	const startBoard = useCallback(async () => {
 		if (!characteristicsRef.current) {
@@ -89,7 +112,7 @@ export const useBluetoothConnection = () => {
 	const stopBoard = useCallback(async () => {
 		if (!characteristicsRef.current) {
 			setErrorMessage("Not connected to the board")
-			return
+			return null
 		}
 		try {
 			const encoder = new TextEncoder()
@@ -97,24 +120,33 @@ export const useBluetoothConnection = () => {
 			await characteristicsRef.current.start.writeValue(value)
 			setIsRunning(false)
 			setConnectionStatus("Board stopped")
+
+			// Read all characteristics after stopping the board
+			return await readAllCharacteristics()
 		} catch (error) {
 			setErrorMessage(`Error stopping board - ${(error as Error).message}`)
+			return null
 		}
-	}, [])
+	}, [readAllCharacteristics])
 
-	const readCharacteristic = async (key: CharacteristicKeys) => {
-		if (!characteristicsRef.current || !isRunning) {
-			return null
+	const disconnectBle = async () => {
+		let finalReadings = null
+		if (isRunning) {
+			finalReadings = await stopBoard()
+		} else if (isConnected) {
+			finalReadings = await readAllCharacteristics()
 		}
-		const characteristic = characteristicsRef.current[key]
-		try {
-			const value = await characteristic.readValue()
-			const decoder = new TextDecoder("utf-8")
-			return decoder.decode(value)
-		} catch (error) {
-			setErrorMessage(`Error reading ${key}: ${(error as Error).message}`)
-			return null
+
+		if (deviceRef.current && deviceRef.current.gatt?.connected) {
+			await deviceRef.current.gatt.disconnect()
 		}
+		setIsConnected(false)
+		setIsRunning(false)
+		setConnectionStatus("Disconnected")
+		characteristicsRef.current = null
+		deviceRef.current = null
+
+		return finalReadings
 	}
 
 	return {
