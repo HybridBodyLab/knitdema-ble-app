@@ -11,6 +11,18 @@ import {
 	TIME_FOR_AUTO_STOP_IN_MINUTES,
 } from "@/lib/constants"
 
+const formatTimeDescription = (timeString: string): string => {
+	const [minutes, seconds] = timeString.split(":").map(Number)
+
+	if (minutes === 0) {
+		return `${seconds} seconds remaining`
+	} else if (minutes === 1) {
+		return `1 minute ${seconds} seconds remaining`
+	} else {
+		return `${minutes} minutes ${seconds} seconds remaining`
+	}
+}
+
 const BleGUI: React.FC = () => {
 	const [receivedData, setReceivedData] = useState<
 		Record<CharacteristicKeys, string>
@@ -235,12 +247,17 @@ const BleGUI: React.FC = () => {
 
 							{/* Timer Display */}
 							{isRunning && (
-								<div className="flex items-center justify-center space-x-3 rounded-lg bg-gray-800/50 p-3 sm:justify-start">
-									<span className="text-sm font-medium text-gray-300">
-										Auto-stop in:
-									</span>
-									<span className="rounded-md bg-gray-900/50 px-3 py-1 font-mono text-xl font-bold">
-										{remainingTime}
+								<div className="flex flex-col space-y-2 rounded-lg bg-gray-800/50 p-3 sm:space-y-1">
+									<div className="flex items-center justify-center space-x-3 sm:justify-start">
+										<span className="text-sm font-medium text-gray-300">
+											Auto-stop in:
+										</span>
+										<span className="rounded-md bg-gray-900/50 px-3 py-1 font-mono text-xl font-bold">
+											{remainingTime}
+										</span>
+									</div>
+									<span className="text-center text-sm text-gray-400 sm:text-left">
+										{formatTimeDescription(remainingTime)}
 									</span>
 								</div>
 							)}
