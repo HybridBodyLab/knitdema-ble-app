@@ -195,39 +195,51 @@ const BleGUI: React.FC = () => {
 	}
 
 	return (
-		<div className="flex min-h-screen flex-col items-center p-8">
-			<Card className="w-full max-w-3xl rounded-lg p-6 text-white shadow-md">
-				<div className="mb-6 flex flex-col items-center justify-between space-y-4 sm:flex-row sm:space-y-0">
-					<Button
-						onClick={isConnected ? handleDisconnect : connectToBle}
-						className={`w-full rounded-md border border-gray-600 px-4 py-2 text-white sm:w-auto ${
-							isConnected
-								? "bg-red-600 hover:bg-red-700"
-								: "bg-blue-600 hover:bg-blue-700"
-						}`}
-					>
-						{isConnected ? "Disconnect" : "Connect"}
-					</Button>
+		<div className="flex min-h-screen flex-col items-center p-4 sm:p-8">
+			<Card className="w-full max-w-3xl rounded-lg p-4 text-white shadow-md sm:p-6">
+				<div className="flex flex-col space-y-4">
+					{/* Connection Button */}
+					<div className="w-full">
+						<Button
+							onClick={isConnected ? handleDisconnect : connectToBle}
+							className={`w-full rounded-md border border-gray-600 px-4 py-2 text-white sm:w-auto ${
+								isConnected
+									? "bg-red-600 hover:bg-red-700"
+									: "bg-blue-600 hover:bg-blue-700"
+							}`}
+						>
+							{isConnected ? "Disconnect" : "Connect"}
+						</Button>
+					</div>
+
+					{/* Controls Section */}
 					{isConnected && (
-						<div className="flex items-center space-x-4">
-							<Button
-								onClick={handleStartBoard}
-								className="rounded-md border border-gray-600 bg-green-600 px-4 py-2 text-white hover:bg-green-700"
-								disabled={isRunning}
-							>
-								Start Board
-							</Button>
-							<Button
-								onClick={handleStopBoard}
-								className="rounded-md border border-gray-600 bg-red-600 px-4 py-2 text-white hover:bg-red-700"
-								disabled={!isRunning}
-							>
-								Stop Board
-							</Button>
+						<div className="flex flex-col space-y-4">
+							{/* Control Buttons */}
+							<div className="grid grid-cols-2 gap-3 sm:flex sm:flex-row sm:space-x-4">
+								<Button
+									onClick={handleStartBoard}
+									className="rounded-md border border-gray-600 bg-green-600 px-4 py-2 text-white hover:bg-green-700"
+									disabled={isRunning}
+								>
+									Start Board
+								</Button>
+								<Button
+									onClick={handleStopBoard}
+									className="rounded-md border border-gray-600 bg-red-600 px-4 py-2 text-white hover:bg-red-700"
+									disabled={!isRunning}
+								>
+									Stop Board
+								</Button>
+							</div>
+
+							{/* Timer Display */}
 							{isRunning && (
-								<div className="flex items-center space-x-2">
-									<span className="text-sm font-medium">Auto-stop in:</span>
-									<span className="font-mono text-lg font-bold">
+								<div className="flex items-center justify-center space-x-3 rounded-lg bg-gray-800/50 p-3 sm:justify-start">
+									<span className="text-sm font-medium text-gray-300">
+										Auto-stop in:
+									</span>
+									<span className="rounded-md bg-gray-900/50 px-3 py-1 font-mono text-xl font-bold">
 										{remainingTime}
 									</span>
 								</div>
@@ -235,11 +247,15 @@ const BleGUI: React.FC = () => {
 						</div>
 					)}
 				</div>
-				<StatusPanel
-					connectionStatus={connectionStatus}
-					isRunning={isRunning}
-					errorMessage={errorMessage}
-				/>
+
+				{/* Status and Table */}
+				<div className="mt-6">
+					<StatusPanel
+						connectionStatus={connectionStatus}
+						isRunning={isRunning}
+						errorMessage={errorMessage}
+					/>
+				</div>
 				<div className="mt-6">
 					<SMATable smaData={transformDataForSMATable(receivedData)} />
 				</div>
