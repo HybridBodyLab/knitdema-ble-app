@@ -5,6 +5,11 @@ import { Button } from "./ui/button"
 import { Card } from "./ui/card"
 import StatusPanel from "./status-panel"
 import SMATable from "./sma-table"
+import { addMinutes, differenceInSeconds } from "date-fns"
+import {
+	TIME_FOR_AUTO_STOP,
+	TIME_FOR_AUTO_STOP_IN_MINUTES,
+} from "@/lib/constants"
 
 const BleGUI: React.FC = () => {
 	const [receivedData, setReceivedData] = useState<
@@ -19,6 +24,9 @@ const BleGUI: React.FC = () => {
 		pinky: "000000",
 		palm: "0000000",
 	})
+
+	const [startTime, setStartTime] = useState<Date | null>(null)
+	const [remainingTime, setRemainingTime] = useState<string>(TIME_FOR_AUTO_STOP)
 
 	const {
 		connectionStatus,
@@ -35,6 +43,8 @@ const BleGUI: React.FC = () => {
 	const readingQueueRef = useRef<CharacteristicKeys[]>([])
 	const isProcessingRef = useRef(false)
 	const intervalIdRef = useRef<number | null>(null)
+	const autoStopTimeoutRef = useRef<number | null>(null)
+	const countdownIntervalRef = useRef<number | null>(null)
 
 	const readCharacteristics = useCallback(() => {
 		const processQueue = async () => {
@@ -67,6 +77,65 @@ const BleGUI: React.FC = () => {
 		processQueue()
 	}, [isRunning, readCharacteristic])
 
+	// Update countdown timer
+	useEffect(() => {
+		if (isRunning && startTime) {
+			const updateCountdown = () => {
+				const now = new Date()
+				const stopTime = addMinutes(startTime, TIME_FOR_AUTO_STOP_IN_MINUTES)
+				const secondsRemaining = differenceInSeconds(stopTime, now)
+
+				if (secondsRemaining <= 0) {
+					setRemainingTime("00:00")
+					return
+				}
+
+				const minutes = Math.floor(secondsRemaining / 60)
+				const seconds = secondsRemaining % 60
+				setRemainingTime(
+					`${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`,
+				)
+			}
+
+			// Update immediately and then every second
+			updateCountdown()
+			countdownIntervalRef.current = window.setInterval(updateCountdown, 1000)
+		} else {
+			setRemainingTime(TIME_FOR_AUTO_STOP)
+			if (countdownIntervalRef.current) {
+				window.clearInterval(countdownIntervalRef.current)
+			}
+		}
+
+		return () => {
+			if (countdownIntervalRef.current) {
+				window.clearInterval(countdownIntervalRef.current)
+			}
+		}
+	}, [isRunning, startTime])
+
+	// Auto-stop after 30 minutes
+	useEffect(() => {
+		if (isRunning && startTime) {
+			const stopTime = addMinutes(startTime, TIME_FOR_AUTO_STOP_IN_MINUTES)
+			const timeUntilStop = stopTime.getTime() - new Date().getTime()
+
+			if (autoStopTimeoutRef.current) {
+				window.clearTimeout(autoStopTimeoutRef.current)
+			}
+
+			autoStopTimeoutRef.current = window.setTimeout(() => {
+				handleStopBoard()
+			}, timeUntilStop)
+		}
+
+		return () => {
+			if (autoStopTimeoutRef.current) {
+				window.clearTimeout(autoStopTimeoutRef.current)
+			}
+		}
+	}, [isRunning, startTime])
+
 	useEffect(() => {
 		if (isRunning) {
 			intervalIdRef.current = window.setInterval(readCharacteristics, 100)
@@ -91,6 +160,12 @@ const BleGUI: React.FC = () => {
 		if (finalReadings) {
 			setReceivedData((prev) => ({ ...prev, ...finalReadings }))
 		}
+		setStartTime(null)
+	}
+
+	const handleStartBoard = async () => {
+		await startBoard()
+		setStartTime(new Date())
 	}
 
 	const handleStopBoard = async () => {
@@ -98,6 +173,7 @@ const BleGUI: React.FC = () => {
 		if (finalReadings) {
 			setReceivedData((prev) => ({ ...prev, ...finalReadings }))
 		}
+		setStartTime(null)
 	}
 
 	const transformDataForSMATable = (
@@ -133,9 +209,9 @@ const BleGUI: React.FC = () => {
 						{isConnected ? "Disconnect" : "Connect"}
 					</Button>
 					{isConnected && (
-						<div className="flex space-x-4">
+						<div className="flex items-center space-x-4">
 							<Button
-								onClick={startBoard}
+								onClick={handleStartBoard}
 								className="rounded-md border border-gray-600 bg-green-600 px-4 py-2 text-white hover:bg-green-700"
 								disabled={isRunning}
 							>
@@ -148,6 +224,14 @@ const BleGUI: React.FC = () => {
 							>
 								Stop Board
 							</Button>
+							{isRunning && (
+								<div className="flex items-center space-x-2">
+									<span className="text-sm font-medium">Auto-stop in:</span>
+									<span className="font-mono text-lg font-bold">
+										{remainingTime}
+									</span>
+								</div>
+							)}
 						</div>
 					)}
 				</div>
