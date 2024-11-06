@@ -9,6 +9,15 @@ interface MainNavProps {
 }
 
 export function MainNav({ items }: MainNavProps) {
+  const handleLinkClick = (event: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => {
+    const userConfirmed = window.confirm("Are you sure you want to Reload? This will stop any compression happening in the Glove");
+    if (!userConfirmed) {
+      event.preventDefault();
+    } else {
+      window.location.reload();
+    }
+  };
+
   return (
     <div className="flex gap-6 md:gap-10">
       <Link to="/" className="flex items-center space-x-2">
@@ -23,6 +32,7 @@ export function MainNav({ items }: MainNavProps) {
                 <Link
                   key={index}
                   to={item.href}
+                  onClick={handleLinkClick}
                   className={cn(
                     "flex items-center text-sm font-medium text-muted-foreground",
                     item.disabled && "cursor-not-allowed opacity-80",
