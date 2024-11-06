@@ -89,7 +89,7 @@ const BleGUI: React.FC = () => {
 		processQueue()
 	}, [isRunning, readCharacteristic])
 
-	// Update countdown timer
+	// Update countdown time
 	useEffect(() => {
 		if (isRunning && startTime) {
 			const updateCountdown = () => {
