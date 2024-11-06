@@ -22,7 +22,7 @@ const DataDisplay: React.FC<DataDisplayProps> = ({ receivedData }) => (
 
 			<Card className="bg-white dark:bg-gray-800">
 				<h2 className="mb-2 text-xl font-semibold text-gray-700 dark:text-gray-300">
-					Start Value
+					{`Start Value`}
 				</h2>
 				<div className="rounded-md border border-gray-200 bg-gray-100 p-4 dark:border-gray-600 dark:bg-gray-700">
 					<p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
