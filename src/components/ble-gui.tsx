@@ -139,7 +139,7 @@ const BleGUI: React.FC = () => {
 			}
 
 			autoStopTimeoutRef.current = window.setTimeout(() => {
-				handleStopBoard();
+				handleDisconnect();
 				createSessionEndAlert();
 			}, timeUntilStop)
 		}
@@ -192,11 +192,14 @@ const BleGUI: React.FC = () => {
 	}
 
 	const createSessionEndAlert = async () => {
-		if(playAlert) {
-			await notificationSound.play()
+		if (playAlert) {
+			await new Promise((resolve) => {
+				notificationSound.play();
+				notificationSound.onended = resolve;
+			});
 		}
 		window.alert(`Your ${formatTimeDescription(TIME_FOR_AUTO_STOP)} session has Ended!`);
-	}
+	};
 
 	const transformDataForSMATable = (
 		data: Record<CharacteristicKeys, string>,
