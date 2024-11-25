@@ -5,7 +5,7 @@ import { Button } from "./ui/button"
 import { Card } from "./ui/card"
 import StatusPanel from "./status-panel"
 import SMATable from "./sma-table"
-import { addMinutes, differenceInSeconds } from "date-fns"
+import { addSeconds, differenceInSeconds } from "date-fns"
 import {
 	TIME_FOR_AUTO_STOP,
 	TIME_FOR_AUTO_STOP_IN_MINUTES,
@@ -15,11 +15,11 @@ const formatTimeDescription = (timeString: string): string => {
 	const [minutes, seconds] = timeString.split(":").map(Number)
 
 	if (minutes === 0) {
-		return `${seconds} seconds remaining`
+		return `${seconds} seconds`
 	} else if (minutes === 1) {
-		return `1 minute ${seconds} seconds remaining`
+		return `1 minute ${seconds} seconds`
 	} else {
-		return `${minutes} minutes ${seconds} seconds remaining`
+		return `${minutes} minutes ${seconds} seconds`
 	}
 }
 
@@ -39,6 +39,7 @@ const BleGUI: React.FC = () => {
 
 	const [startTime, setStartTime] = useState<Date | null>(null)
 	const [remainingTime, setRemainingTime] = useState<string>(TIME_FOR_AUTO_STOP)
+	const [playAlert, setPlayAlert] = useState<boolean>(false);
 
 	const {
 		connectionStatus,
@@ -57,6 +58,7 @@ const BleGUI: React.FC = () => {
 	const intervalIdRef = useRef<number | null>(null)
 	const autoStopTimeoutRef = useRef<number | null>(null)
 	const countdownIntervalRef = useRef<number | null>(null)
+	const notificationSound = new Audio("https://github.com/AshwinRajarajan/dummy/raw/refs/heads/main/notification-tune.mp3")
 
 	const readCharacteristics = useCallback(() => {
 		const processQueue = async () => {
@@ -94,7 +96,7 @@ const BleGUI: React.FC = () => {
 		if (isRunning && startTime) {
 			const updateCountdown = () => {
 				const now = new Date()
-				const stopTime = addMinutes(startTime, TIME_FOR_AUTO_STOP_IN_MINUTES)
+				const stopTime = addSeconds(startTime, TIME_FOR_AUTO_STOP_IN_MINUTES * 60)
 				const secondsRemaining = differenceInSeconds(stopTime, now)
 
 				if (secondsRemaining <= 0) {
@@ -129,7 +131,7 @@ const BleGUI: React.FC = () => {
 	// Auto-stop after 30 minutes
 	useEffect(() => {
 		if (isRunning && startTime) {
-			const stopTime = addMinutes(startTime, TIME_FOR_AUTO_STOP_IN_MINUTES)
+			const stopTime = addSeconds(startTime, TIME_FOR_AUTO_STOP_IN_MINUTES * 60)
 			const timeUntilStop = stopTime.getTime() - new Date().getTime()
 
 			if (autoStopTimeoutRef.current) {
@@ -137,7 +139,8 @@ const BleGUI: React.FC = () => {
 			}
 
 			autoStopTimeoutRef.current = window.setTimeout(() => {
-				handleStopBoard()
+				handleDisconnect();
+				createSessionEndAlert();
 			}, timeUntilStop)
 		}
 
@@ -146,7 +149,7 @@ const BleGUI: React.FC = () => {
 				window.clearTimeout(autoStopTimeoutRef.current)
 			}
 		}
-	}, [isRunning, startTime])
+	}, [isRunning, startTime, playAlert])
 
 	useEffect(() => {
 		if (isRunning) {
@@ -187,6 +190,16 @@ const BleGUI: React.FC = () => {
 		}
 		setStartTime(null)
 	}
+
+	const createSessionEndAlert = async () => {
+		if (playAlert) {
+			await new Promise((resolve) => {
+				notificationSound.play();
+				notificationSound.onended = resolve;
+			});
+		}
+		window.alert(`Your ${formatTimeDescription(TIME_FOR_AUTO_STOP)} session has Ended!`);
+	};
 
 	const transformDataForSMATable = (
 		data: Record<CharacteristicKeys, string>,
@@ -243,6 +256,15 @@ const BleGUI: React.FC = () => {
 								>
 									Stop Board
 								</Button>
+								<label className="flex items-center space-x-2 text-blue-500">
+									<input
+										type="checkbox"
+										checked={playAlert}
+										onChange={(e) => setPlayAlert(e.target.checked)}
+										className="form-checkbox rounded text-blue-600 focus:ring-2 focus:ring-blue-400"
+									/>
+									<span>Play Sound Alert when session ends</span>
+								</label>
 							</div>
 
 							{/* Timer Display */}
@@ -257,7 +279,7 @@ const BleGUI: React.FC = () => {
 										</span>
 									</div>
 									<span className="text-center text-sm text-gray-400 sm:text-left">
-										{formatTimeDescription(remainingTime)}
+										{formatTimeDescription(remainingTime) + ' remaining'}
 									</span>
 								</div>
 							)}
