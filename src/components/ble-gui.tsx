@@ -39,7 +39,7 @@ const BleGUI: React.FC = () => {
 
 	const [startTime, setStartTime] = useState<Date | null>(null)
 	const [remainingTime, setRemainingTime] = useState<string>(TIME_FOR_AUTO_STOP)
-	const [playAlert, setPlayAlert] = useState<boolean>(false);
+	const [playAlert, setPlayAlert] = useState<boolean>(false)
 
 	const {
 		connectionStatus,
@@ -58,7 +58,9 @@ const BleGUI: React.FC = () => {
 	const intervalIdRef = useRef<number | null>(null)
 	const autoStopTimeoutRef = useRef<number | null>(null)
 	const countdownIntervalRef = useRef<number | null>(null)
-	const notificationSound = new Audio("https://github.com/AshwinRajarajan/dummy/raw/refs/heads/main/notification-tune.mp3")
+	const notificationSound = new Audio(
+		"https://github.com/AshwinRajarajan/dummy/raw/refs/heads/main/notification-tune.mp3",
+	)
 
 	const readCharacteristics = useCallback(() => {
 		const processQueue = async () => {
@@ -96,7 +98,10 @@ const BleGUI: React.FC = () => {
 		if (isRunning && startTime) {
 			const updateCountdown = () => {
 				const now = new Date()
-				const stopTime = addSeconds(startTime, TIME_FOR_AUTO_STOP_IN_MINUTES * 60)
+				const stopTime = addSeconds(
+					startTime,
+					TIME_FOR_AUTO_STOP_IN_MINUTES * 60,
+				)
 				const secondsRemaining = differenceInSeconds(stopTime, now)
 
 				if (secondsRemaining <= 0) {
@@ -139,8 +144,8 @@ const BleGUI: React.FC = () => {
 			}
 
 			autoStopTimeoutRef.current = window.setTimeout(() => {
-				handleDisconnect();
-				createSessionEndAlert();
+				handleDisconnect()
+				createSessionEndAlert()
 			}, timeUntilStop)
 		}
 
@@ -194,12 +199,14 @@ const BleGUI: React.FC = () => {
 	const createSessionEndAlert = async () => {
 		if (playAlert) {
 			await new Promise((resolve) => {
-				notificationSound.play();
-				notificationSound.onended = resolve;
-			});
+				notificationSound.play()
+				notificationSound.onended = resolve
+			})
 		}
-		window.alert(`Your ${formatTimeDescription(TIME_FOR_AUTO_STOP)} session has Ended!`);
-	};
+		window.alert(
+			`Your ${formatTimeDescription(TIME_FOR_AUTO_STOP)} session has Ended!`,
+		)
+	}
 
 	const transformDataForSMATable = (
 		data: Record<CharacteristicKeys, string>,
@@ -279,7 +286,7 @@ const BleGUI: React.FC = () => {
 										</span>
 									</div>
 									<span className="text-center text-sm text-gray-400 sm:text-left">
-										{formatTimeDescription(remainingTime) + ' remaining'}
+										{formatTimeDescription(remainingTime) + " remaining"}
 									</span>
 								</div>
 							)}
