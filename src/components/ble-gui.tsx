@@ -8,9 +8,9 @@ import { addSeconds, differenceInSeconds } from "date-fns"
 import {
 	TIME_FOR_AUTO_STOP,
 	TIME_FOR_AUTO_STOP_IN_MINUTES,
-	IMAGE_URL
 } from "@/lib/constants"
 import GlowingProgressLines, { LinePosition } from "@/components/GlowingProgressLines.tsx"
+import gloveImage from "/src/assets/glove.png"
 
 const formatTimeDescription = (timeString: string): string => {
 	const [minutes, seconds] = timeString.split(":").map(Number)
@@ -381,7 +381,7 @@ const BleGUI: React.FC = () => {
 				</div>
 				<div className="mt-6 relative" style={{ width: '100%', paddingBottom: '100%' }}>
 					<img
-						src={IMAGE_URL}
+						src={gloveImage}
 						alt="Device Image"
 						className="absolute top-0 left-0 w-full h-full object-contain"
 					/>

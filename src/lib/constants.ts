@@ -1,3 +1,2 @@
 export const TIME_FOR_AUTO_STOP = "00:10"
 export const TIME_FOR_AUTO_STOP_IN_MINUTES = 0.17
-export const IMAGE_URL = "src/assets/glove.png"
