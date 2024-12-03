@@ -25,6 +25,7 @@ const formatTimeDescription = (timeString: string): string => {
 		return `${minutes} minutes ${seconds} seconds`
 	}
 }
+
 const linePositions: Record<string, LinePosition[]> = {
 	thumb: [
 		{
