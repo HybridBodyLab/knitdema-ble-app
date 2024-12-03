@@ -16,7 +16,6 @@ import GlowingProgressLines, {
 
 const formatTimeDescription = (timeString: string): string => {
 	const [minutes, seconds] = timeString.split(":").map(Number)
-
 	if (minutes === 0) {
 		return `${seconds} seconds`
 	} else if (minutes === 1) {
@@ -530,7 +529,9 @@ const BleGUI: React.FC = () => {
 						positions={linePositions}
 					/>
 				</div>
-				<span className="text-blue-600 text-xl flex justify-center items-center">Glove Compression Status</span>
+				<span className="flex items-center justify-center text-xl text-blue-600">
+					Glove Compression Status
+				</span>
 			</Card>
 		</div>
 	)
