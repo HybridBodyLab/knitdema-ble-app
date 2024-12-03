@@ -8,8 +8,8 @@ import { useState, useCallback, useRef } from "react"
 export const useBluetoothConnection = () => {
 	const [connectionStatus, setConnectionStatus] = useState("Disconnected")
 	const [errorMessage, setErrorMessage] = useState<string | null>(null)
-	const [isConnected, setIsConnected] = useState(false)
-	const [isRunning, setIsRunning] = useState(false)
+	const [isConnected, setIsConnected] = useState(true)
+	const [isRunning, setIsRunning] = useState(true)
 	const characteristicsRef = useRef<Record<
 		CharacteristicKeys,
 		BluetoothRemoteGATTCharacteristic
