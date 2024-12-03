@@ -16,44 +16,39 @@ interface GlowingProgressLinesProps {
 	characteristics: Record<string, number>;
 	positions: Record<string, LinePosition[]>;
 }
-const calculateLineProperties = (start: { top: string; left: string }, end: { top: string; left: string }) => {
-	const startX = parseFloat(start.left);
-	const endX = parseFloat(end.left);
 
-	const deltaX = endX - startX;
-
-	return { width: `${deltaX}px` };
-};
-
+// const widthScalingFactor = window.innerWidth/412;
+// const heightScalingFactor = window.innerHeight/915;
 const GlowingProgressLines: React.FC<GlowingProgressLinesProps> = ({ characteristics, positions }) => {
 	return (
 		<div style={styles.container}>
 			{Object.entries(characteristics).map(([key, value]) => {
-				if (!positions[key]) return null;
-				return positions[key].map((position, index) => {
-					const { width } = calculateLineProperties(position.start, position.end);
-					return (
+				if (!positions[key] || value == -1) return null;
+				const position = positions[key][value]
+				const startLeft = parseInt(position.start.left);
+				const endLeft = parseInt(position.end.left);
+				const width = endLeft - startLeft;
+				return (
+					<div
+						key={`${key}-${value}`}
+						style={{
+							...styles.line,
+							width: `${width}px`,
+							top: `${position.start.top}`,
+							left: `${position.start.left}`,
+							transform: `rotate(${position.rotation ? position.rotation : 0}deg)`,
+							transformOrigin: "left center",
+							backgroundColor: "#ab3a3d",
+						}}
+					>
 						<div
-							key={`${key}-${index}`}
 							style={{
-								...styles.line,
-								width,
-								top: position.start.top,
-								left: position.start.left,
-								transform: `rotate(${position.rotation? position.rotation : 0}deg)`,
-								transformOrigin: 'left center',
-								backgroundColor: '#FF5733',
+								...styles.glow,
+								width: `100%`,
 							}}
-						>
-							<div
-								style={{
-									...styles.glow,
-									width: `${value}%`,
-								}}
-							/>
-						</div>
-					);
-				});
+						/>
+					</div>
+				)
 			})}
 		</div>
 	);

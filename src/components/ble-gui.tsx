@@ -407,20 +407,18 @@ const BleGUI: React.FC = () => {
 	): Record<string, number> => {
 		const result: Record<string, number> = {}
 		const characteristics = [
+			"palm",
 			"thumb",
 			"index",
 			"middle",
 			"ring",
 			"pinky",
-			"palm",
 		]
-
 		characteristics.forEach((char) => {
 			if (char in data) {
-				result[char] = 100
+				result[char] = data[char as keyof typeof data].indexOf("1")
 			}
 		})
-
 		return result
 	}
 
@@ -500,7 +498,7 @@ const BleGUI: React.FC = () => {
 											{remainingTime}
 										</span>
 									</div>
-									<span className="text-center text-sm text-gray-400 sm:text-left">
+									<span className="text-center text-sm text-red-800 sm:text-left">
 										{formatTimeDescription(remainingTime) + " remaining"}
 									</span>
 								</div>
@@ -523,7 +521,7 @@ const BleGUI: React.FC = () => {
 				>
 					<img
 						src={gloveImage}
-						alt="Device Image"
+						alt="Knitdema Glove"
 						className="absolute left-0 top-0 h-full w-full object-contain"
 					/>
 					<GlowingProgressLines
@@ -531,6 +529,7 @@ const BleGUI: React.FC = () => {
 						positions={linePositions}
 					/>
 				</div>
+				<span className="text-blue-600 text-xl flex justify-center items-center">Glove Compression Status</span>
 			</Card>
 		</div>
 	)
