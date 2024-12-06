@@ -10,6 +10,7 @@ import {
 	TIME_FOR_AUTO_STOP_IN_MINUTES,
 } from "@/lib/constants"
 import gloveImage from "/src/assets/glove.png"
+import audio from "/src/assets/notification.mp3"
 import GlowingProgressLines, {
 	LinePosition,
 } from "@/components/GlowingProgressLines.tsx"
@@ -217,7 +218,7 @@ const BleGUI: React.FC = () => {
 
 	const [startTime, setStartTime] = useState<Date | null>(null)
 	const [remainingTime, setRemainingTime] = useState<string>(TIME_FOR_AUTO_STOP)
-	const [playAlert, setPlayAlert] = useState<boolean>(false)
+	const [playAlert, setPlayAlert] = useState<boolean>(true)
 
 	const {
 		connectionStatus,
@@ -236,9 +237,7 @@ const BleGUI: React.FC = () => {
 	const intervalIdRef = useRef<number | null>(null)
 	const autoStopTimeoutRef = useRef<number | null>(null)
 	const countdownIntervalRef = useRef<number | null>(null)
-	const notificationSound = new Audio(
-		"https://github.com/AshwinRajarajan/dummy/raw/refs/heads/main/notification-tune.mp3",
-	)
+	const notificationSound = new Audio(audio)
 
 	const readCharacteristics = useCallback(() => {
 		const processQueue = async () => {
@@ -374,24 +373,6 @@ const BleGUI: React.FC = () => {
 		setStartTime(null)
 	}
 
-	// let positions : any[] = []
-	// let i: number = 0;
-	// const handleClick = (event: React.MouseEvent<HTMLDivElement>) => {
-	// 	const rect = event.currentTarget.getBoundingClientRect();
-	// 	const x = event.clientX - rect.left; // X coordinate relative to the element
-	// 	const y = event.clientY - rect.top; // Y coordinate relative to the element
-	//
-	//
-	// 	const newPositions:any = { ...positions };
-	//
-	// 	i += 1;
-	// 	newPositions[`finger${i}`] = { top: `${y}px`, left: `${x}px`, width: '20%', rotation: 0 };
-	//
-	// 	positions = newPositions;
-	// 	console.log(positions)
-	//
-	// };
-
 	const createSessionEndAlert = async () => {
 		if (playAlert) {
 			await new Promise((resolve) => {
@@ -399,7 +380,8 @@ const BleGUI: React.FC = () => {
 				notificationSound.onended = resolve
 			})
 		}
-		window.alert(`Your 30 minutes session has Ended!`)
+		window.alert(`Your ${formatTimeDescription(TIME_FOR_AUTO_STOP)} session has Ended!`)
+		window.location.reload()
 	}
 
 	const transformDataForGlowingLines = (
@@ -407,12 +389,7 @@ const BleGUI: React.FC = () => {
 	): Record<string, number> => {
 		const result: Record<string, number> = {}
 		const characteristics = [
-			"palm",
-			"thumb",
-			"index",
-			"middle",
-			"ring",
-			"pinky",
+			"palm", "thumb", "index", "middle", "ring", "pinky",
 		]
 		characteristics.forEach((char) => {
 			if (char in data) {
@@ -422,23 +399,6 @@ const BleGUI: React.FC = () => {
 		return result
 	}
 
-	// const transformDataForSMATable = (
-	// 	data: Record<CharacteristicKeys, string>,
-	// ) => {
-	// 	const smaData = []
-	// 	for (let i = 0; i < 7; i++) {
-	// 		smaData.push({
-	// 			number: `SMA${i + 1}`,
-	// 			index: i < 6 ? (data.index[i] === "1" ? "high" : "disabled") : "N/A",
-	// 			middle: i < 6 ? (data.middle[i] === "1" ? "high" : "disabled") : "N/A",
-	// 			ring: i < 6 ? (data.ring[i] === "1" ? "high" : "disabled") : "N/A",
-	// 			little: i < 6 ? (data.pinky[i] === "1" ? "high" : "disabled") : "N/A",
-	// 			thumb: i < 6 ? (data.thumb[i] === "1" ? "high" : "disabled") : "N/A",
-	// 			palm: data.palm[i] === "1" ? "high" : "disabled",
-	// 		})
-	// 	}
-	// 	return smaData
-	// }
 	return (
 		<div className="flex min-h-screen flex-col items-center p-4 sm:p-8">
 			<Card className="w-full max-w-3xl rounded-lg p-4 text-white shadow-md sm:p-6">

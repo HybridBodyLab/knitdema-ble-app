@@ -38,7 +38,7 @@ const GlowingProgressLines: React.FC<GlowingProgressLinesProps> = ({ characteris
 							left: `${position.start.left}`,
 							transform: `rotate(${position.rotation ? position.rotation : 0}deg)`,
 							transformOrigin: "left center",
-							backgroundColor: "#ab3a3d",
+							backgroundColor: "#39ff14",
 						}}
 					>
 						<div
