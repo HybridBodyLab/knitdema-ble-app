@@ -1,30 +1,18 @@
+// src/components/ble-gui.tsx
+
 import React, { useState, useCallback, useRef, useEffect } from "react"
 import { CHARACTERISTIC_UUIDS, CharacteristicKeys } from "@/constants"
 import { useBluetoothConnection } from "@/hooks/use-bluetooth-connection"
 import { Button } from "./ui/button"
 import { Card } from "./ui/card"
 import StatusPanel from "./status-panel"
-import { addSeconds, differenceInSeconds } from "date-fns"
-import {
-	TIME_FOR_AUTO_STOP,
-	TIME_FOR_AUTO_STOP_IN_MINUTES,
-} from "@/lib/constants"
+import { addMinutes, differenceInSeconds, format } from "date-fns"
+import { SESSION_DURATION_MINUTES } from "@/lib/constants"
 import gloveImage from "/src/assets/glove.png"
 import audio from "/src/assets/notification.mp3"
 import GlowingProgressLines, {
 	LinePosition,
 } from "@/components/GlowingProgressLines.tsx"
-
-const formatTimeDescription = (timeString: string): string => {
-	const [minutes, seconds] = timeString.split(":").map(Number)
-	if (minutes === 0) {
-		return `${seconds} seconds`
-	} else if (minutes === 1) {
-		return `1 minute ${seconds} seconds`
-	} else {
-		return `${minutes} minutes ${seconds} seconds`
-	}
-}
 
 const linePositions: Record<string, LinePosition[]> = {
 	thumb: [
@@ -217,7 +205,9 @@ const BleGUI: React.FC = () => {
 	})
 
 	const [startTime, setStartTime] = useState<Date | null>(null)
-	const [remainingTime, setRemainingTime] = useState<string>(TIME_FOR_AUTO_STOP)
+	const [remainingTime, setRemainingTime] = useState<string>(
+		format(new Date(SESSION_DURATION_MINUTES * 60 * 1000), "mm:ss"),
+	)
 	const [playAlert, setPlayAlert] = useState<boolean>(true)
 
 	const {
@@ -235,9 +225,29 @@ const BleGUI: React.FC = () => {
 	const readingQueueRef = useRef<CharacteristicKeys[]>([])
 	const isProcessingRef = useRef(false)
 	const intervalIdRef = useRef<number | null>(null)
-	const autoStopTimeoutRef = useRef<number | null>(null)
-	const countdownIntervalRef = useRef<number | null>(null)
 	const notificationSound = new Audio(audio)
+
+	const formatRemainingTime = (seconds: number): string => {
+		if (seconds <= 0) return "00:00"
+		return format(new Date(seconds * 1000), "mm:ss")
+	}
+
+	const formatRemainingTimeDisplay = (seconds: number): string => {
+		if (seconds <= 0) return "Time's up"
+
+		const minutes = Math.floor(seconds / 60)
+		const remainingSeconds = seconds % 60
+
+		if (minutes === 0) {
+			return `${remainingSeconds} second${remainingSeconds !== 1 ? "s" : ""} remaining`
+		}
+
+		if (remainingSeconds === 0) {
+			return `${minutes} minute${minutes !== 1 ? "s" : ""} remaining`
+		}
+
+		return `${minutes} minute${minutes !== 1 ? "s" : ""} ${remainingSeconds} second${remainingSeconds !== 1 ? "s" : ""} remaining`
+	}
 
 	const readCharacteristics = useCallback(() => {
 		const processQueue = async () => {
@@ -245,8 +255,10 @@ const BleGUI: React.FC = () => {
 				isProcessingRef.current ||
 				readingQueueRef.current.length === 0 ||
 				!isRunning
-			)
+			) {
 				return
+			}
+
 			isProcessingRef.current = true
 			while (readingQueueRef.current.length > 0 && isRunning) {
 				const key = readingQueueRef.current.shift()
@@ -262,6 +274,7 @@ const BleGUI: React.FC = () => {
 		}
 
 		if (!isRunning) return
+
 		Object.keys(CHARACTERISTIC_UUIDS).forEach((key) => {
 			if (key !== "led" && key !== "start") {
 				readingQueueRef.current.push(key as CharacteristicKeys)
@@ -270,67 +283,36 @@ const BleGUI: React.FC = () => {
 		processQueue()
 	}, [isRunning, readCharacteristic])
 
-	// Update countdown time
 	useEffect(() => {
-		if (isRunning && startTime) {
-			const updateCountdown = () => {
-				const now = new Date()
-				const stopTime = addSeconds(
-					startTime,
-					TIME_FOR_AUTO_STOP_IN_MINUTES * 60,
-				)
-				const secondsRemaining = differenceInSeconds(stopTime, now)
-
-				if (secondsRemaining <= 0) {
-					setRemainingTime("00:00")
-					return
-				}
-
-				const minutes = Math.floor(secondsRemaining / 60)
-				const seconds = secondsRemaining % 60
-				setRemainingTime(
-					`${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`,
-				)
-			}
-
-			// Update immediately and then every second
-			updateCountdown()
-			countdownIntervalRef.current = window.setInterval(updateCountdown, 1000)
-		} else {
-			setRemainingTime(TIME_FOR_AUTO_STOP)
-			if (countdownIntervalRef.current) {
-				window.clearInterval(countdownIntervalRef.current)
-			}
+		if (!isRunning || !startTime) {
+			setRemainingTime(formatRemainingTime(SESSION_DURATION_MINUTES * 60))
+			return () => {}
 		}
 
-		return () => {
-			if (countdownIntervalRef.current) {
-				window.clearInterval(countdownIntervalRef.current)
-			}
+		const stopTime = addMinutes(startTime, SESSION_DURATION_MINUTES)
+
+		const updateCountdown = () => {
+			const remaining = differenceInSeconds(stopTime, new Date())
+			setRemainingTime(formatRemainingTime(remaining))
 		}
+
+		updateCountdown()
+		const intervalId = window.setInterval(updateCountdown, 1000)
+		return () => window.clearInterval(intervalId)
 	}, [isRunning, startTime])
 
-	// Auto-stop after 30 minutes
 	useEffect(() => {
-		if (isRunning && startTime) {
-			const stopTime = addSeconds(startTime, TIME_FOR_AUTO_STOP_IN_MINUTES * 60)
-			const timeUntilStop = stopTime.getTime() - new Date().getTime()
+		if (!isRunning || !startTime) return () => {}
 
-			if (autoStopTimeoutRef.current) {
-				window.clearTimeout(autoStopTimeoutRef.current)
-			}
+		const stopTime = addMinutes(startTime, SESSION_DURATION_MINUTES)
+		const timeUntilStop = stopTime.getTime() - new Date().getTime()
 
-			autoStopTimeoutRef.current = window.setTimeout(() => {
-				handleDisconnect()
-				createSessionEndAlert()
-			}, timeUntilStop)
-		}
+		const timeoutId = window.setTimeout(() => {
+			handleDisconnect()
+			createSessionEndAlert()
+		}, timeUntilStop)
 
-		return () => {
-			if (autoStopTimeoutRef.current) {
-				window.clearTimeout(autoStopTimeoutRef.current)
-			}
-		}
+		return () => window.clearTimeout(timeoutId)
 	}, [isRunning, startTime, playAlert])
 
 	useEffect(() => {
@@ -380,7 +362,7 @@ const BleGUI: React.FC = () => {
 				notificationSound.onended = resolve
 			})
 		}
-		window.alert(`Your ${formatTimeDescription(TIME_FOR_AUTO_STOP)} session has Ended!`)
+		window.alert(`Your session has ended!`)
 		window.location.reload()
 	}
 
@@ -389,7 +371,12 @@ const BleGUI: React.FC = () => {
 	): Record<string, number> => {
 		const result: Record<string, number> = {}
 		const characteristics = [
-			"palm", "thumb", "index", "middle", "ring", "pinky",
+			"palm",
+			"thumb",
+			"index",
+			"middle",
+			"ring",
+			"pinky",
 		]
 		characteristics.forEach((char) => {
 			if (char in data) {
@@ -403,7 +390,6 @@ const BleGUI: React.FC = () => {
 		<div className="flex min-h-screen flex-col items-center p-4 sm:p-8">
 			<Card className="w-full max-w-3xl rounded-lg p-4 text-white shadow-md sm:p-6">
 				<div className="flex flex-col space-y-4">
-					{/* Connection Button */}
 					<div className="w-full">
 						<Button
 							onClick={isConnected ? handleDisconnect : connectToBle}
@@ -417,10 +403,8 @@ const BleGUI: React.FC = () => {
 						</Button>
 					</div>
 
-					{/* Controls Section */}
 					{isConnected && (
 						<div className="flex flex-col space-y-4">
-							{/* Control Buttons */}
 							<div className="grid grid-cols-2 gap-3 sm:flex sm:flex-row sm:space-x-4">
 								<Button
 									onClick={handleStartBoard}
@@ -447,7 +431,6 @@ const BleGUI: React.FC = () => {
 								</label>
 							</div>
 
-							{/* Timer Display */}
 							{isRunning && (
 								<div className="flex flex-col space-y-2 rounded-lg bg-gray-800/50 p-3 sm:space-y-1">
 									<div className="flex items-center justify-center space-x-3 sm:justify-start">
@@ -459,7 +442,12 @@ const BleGUI: React.FC = () => {
 										</span>
 									</div>
 									<span className="text-center text-sm text-red-800 sm:text-left">
-										{formatTimeDescription(remainingTime) + " remaining"}
+										{formatRemainingTimeDisplay(
+											differenceInSeconds(
+												addMinutes(startTime!, SESSION_DURATION_MINUTES),
+												new Date(),
+											),
+										)}
 									</span>
 								</div>
 							)}
@@ -467,7 +455,6 @@ const BleGUI: React.FC = () => {
 					)}
 				</div>
 
-				{/* Status and Table */}
 				<div className="mt-6">
 					<StatusPanel
 						connectionStatus={connectionStatus}

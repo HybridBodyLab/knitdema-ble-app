@@ -1,2 +1,2 @@
-export const TIME_FOR_AUTO_STOP = "30:00"
-export const TIME_FOR_AUTO_STOP_IN_MINUTES = 30
+// src/lib/constants.ts
+export const SESSION_DURATION_MINUTES = 30
