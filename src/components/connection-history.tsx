@@ -70,9 +70,7 @@ const ConnectionHistory: React.FC<ConnectionHistoryProps> = ({
 							{
 								...lastConnection,
 								disconnectTime: new Date().toISOString(),
-								boardStopTime: lastConnection.boardStartTime
-									? new Date().toISOString()
-									: null,
+								// Don't update boardStopTime on disconnect
 							},
 						]
 					}
