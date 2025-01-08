@@ -12,7 +12,8 @@ import gloveImage from "/src/assets/glove.png"
 import audio from "/src/assets/notification.mp3"
 import GlowingProgressLines, {
 	LinePosition,
-} from "@/components/GlowingProgressLines.tsx"
+} from "@/components/glowing-progress-lines"
+import ConnectionHistory from "./connection-history"
 
 const linePositions: Record<string, LinePosition[]> = {
 	thumb: [
@@ -454,7 +455,6 @@ const BleGUI: React.FC = () => {
 						</div>
 					)}
 				</div>
-
 				<div className="mt-6">
 					<StatusPanel
 						connectionStatus={connectionStatus}
@@ -479,6 +479,10 @@ const BleGUI: React.FC = () => {
 				<span className="flex items-center justify-center text-xl text-blue-600">
 					Glove Compression Status
 				</span>
+				{/* To show the connection history */}
+				<div className="flex items-center justify-center text-xl text-blue-600">
+					<ConnectionHistory isConnected={isConnected} />
+				</div>
 			</Card>
 		</div>
 	)

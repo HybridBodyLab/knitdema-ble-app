@@ -1,0 +1,207 @@
+import React, { useState, useEffect, useRef } from "react"
+import {
+	AlertDialog,
+	AlertDialogContent,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogCancel,
+} from "@/components/ui/alert-dialog"
+import { Button } from "@/components/ui/button"
+import {
+	InputOTP,
+	InputOTPGroup,
+	InputOTPSlot,
+} from "@/components/ui/input-otp"
+import { Trash2 } from "lucide-react"
+import { useLocalStorage } from "usehooks-ts"
+import { formatDistance } from "date-fns"
+import { formatInTimeZone } from "date-fns-tz"
+
+interface ConnectionRecord {
+	id: number
+	connectTime: string
+	disconnectTime: string | null
+}
+
+interface ConnectionHistoryProps {
+	isConnected: boolean
+}
+
+const EST_TIMEZONE = "America/New_York"
+
+const ConnectionHistory: React.FC<ConnectionHistoryProps> = ({
+	isConnected,
+}) => {
+	const [connections, setConnections, removeConnections] = useLocalStorage<
+		ConnectionRecord[]
+	>("device-connections", [])
+	const [password, setPassword] = useState<string>("")
+	const [selectedId, setSelectedId] = useState<number | null>(null)
+	const [showDialog, setShowDialog] = useState<boolean>(false)
+	const [error, setError] = useState<string>("")
+	const prevConnectedRef = useRef<boolean>(isConnected)
+
+	useEffect(() => {
+		if (prevConnectedRef.current !== isConnected) {
+			if (isConnected) {
+				const newConnection: ConnectionRecord = {
+					id: Date.now(),
+					connectTime: new Date().toISOString(),
+					disconnectTime: null,
+				}
+				setConnections((prev) => [...prev, newConnection])
+			} else {
+				setConnections((prev) => {
+					const lastConnection = prev[prev.length - 1]
+					if (lastConnection && !lastConnection.disconnectTime) {
+						return [
+							...prev.slice(0, -1),
+							{
+								...lastConnection,
+								disconnectTime: new Date().toISOString(),
+							},
+						]
+					}
+					return prev
+				})
+			}
+			prevConnectedRef.current = isConnected
+		}
+	}, [isConnected, setConnections])
+
+	const formatDate = (dateString: string | null): string => {
+		if (!dateString) return "Active"
+
+		const date = new Date(dateString)
+
+		// Format the date in EST
+		const formattedDate = formatInTimeZone(
+			date,
+			EST_TIMEZONE,
+			"MMM d, yyyy h:mm:ss a zzz",
+		)
+
+		// Add relative time
+		const relativeTime = formatDistance(date, new Date(), {
+			addSuffix: true,
+		})
+
+		return `${formattedDate} (${relativeTime})`
+	}
+
+	const handleDelete = (id: number): void => {
+		setSelectedId(id)
+		setShowDialog(true)
+		setPassword("")
+		setError("")
+	}
+
+	const confirmDelete = (): void => {
+		if (password === "1234") {
+			setConnections(connections.filter((conn) => conn.id !== selectedId))
+			setShowDialog(false)
+			setError("")
+		} else {
+			setError("Incorrect password")
+		}
+	}
+
+	const handleClearAll = (): void => {
+		removeConnections()
+	}
+
+	return (
+		<div className="mt-6 space-y-4">
+			<div className="flex items-center justify-between">
+				<h2 className="text-xl font-semibold text-white">Connection History</h2>
+				{connections.length > 0 && (
+					<Button
+						variant="destructive"
+						size="sm"
+						onClick={handleClearAll}
+						className="text-sm"
+					>
+						Clear All History
+					</Button>
+				)}
+			</div>
+
+			<div className="space-y-2">
+				{connections.map((conn) => (
+					<div
+						key={conn.id}
+						className="flex items-center justify-between rounded-lg bg-gray-800/50 p-3"
+					>
+						<div className="flex-1 space-y-1">
+							<div className="text-sm text-gray-300">
+								Connected: {formatDate(conn.connectTime)}
+							</div>
+							<div className="text-sm text-gray-300">
+								Disconnected: {formatDate(conn.disconnectTime)}
+							</div>
+						</div>
+						<Button
+							variant="ghost"
+							size="icon"
+							className="text-red-500 hover:text-red-400"
+							onClick={() => handleDelete(conn.id)}
+						>
+							<Trash2 className="size-4" />
+						</Button>
+					</div>
+				))}
+
+				{connections.length === 0 && (
+					<div className="text-center text-gray-400">
+						No connection history available
+					</div>
+				)}
+			</div>
+
+			<AlertDialog open={showDialog} onOpenChange={setShowDialog}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Delete Connection Record</AlertDialogTitle>
+						<AlertDialogDescription>
+							Enter 4-digit password to delete this record
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<div className="space-y-4">
+						<div className="flex justify-center">
+							<InputOTP
+								maxLength={4}
+								value={password}
+								onChange={(value) => setPassword(value)}
+							>
+								<InputOTPGroup>
+									<InputOTPSlot index={0} />
+									<InputOTPSlot index={1} />
+									<InputOTPSlot index={2} />
+									<InputOTPSlot index={3} />
+								</InputOTPGroup>
+							</InputOTP>
+						</div>
+						{error && (
+							<p className="text-center text-sm text-red-500">{error}</p>
+						)}
+					</div>
+					<AlertDialogFooter>
+						<AlertDialogCancel onClick={() => setShowDialog(false)}>
+							Cancel
+						</AlertDialogCancel>
+						<Button
+							onClick={confirmDelete}
+							className="bg-red-600 hover:bg-red-700"
+						>
+							Delete
+						</Button>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+		</div>
+	)
+}
+
+export default ConnectionHistory
