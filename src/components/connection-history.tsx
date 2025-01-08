@@ -18,6 +18,7 @@ import { Trash2, Power } from "lucide-react"
 import { useLocalStorage } from "usehooks-ts"
 import { formatDistance, intervalToDuration } from "date-fns"
 import { formatInTimeZone } from "date-fns-tz"
+import { Card, CardContent, CardHeader } from "./ui/card"
 
 interface ConnectionRecord {
 	id: number
@@ -174,106 +175,125 @@ const ConnectionHistory: React.FC<ConnectionHistoryProps> = ({
 	}
 
 	return (
-		<div className="mt-6 space-y-4">
-			<div className="flex items-center justify-between">
-				<h2 className="text-xl font-semibold text-white">Connection History</h2>
-				{connections.length > 0 && (
-					<Button
-						variant="destructive"
-						size="sm"
-						onClick={handleClearAll}
-						className="text-sm"
-					>
-						Clear All History
-					</Button>
-				)}
-			</div>
-
-			<div className="space-y-2">
-				{connections.map((conn) => (
-					<div
-						key={conn.id}
-						className="flex items-center justify-between rounded-lg bg-gray-800/50 p-3"
-					>
-						<div className="flex-1 space-y-1">
-							<div className="text-sm text-gray-300">
-								Connected: {formatDate(conn.connectTime)}
-							</div>
-							<div className="text-sm text-gray-300">
-								Disconnected: {formatDate(conn.disconnectTime)}
-							</div>
-							{conn.boardStartTime && (
-								<div className="mt-2 flex items-center gap-2 text-sm">
-									<Power className="size-4 text-green-500" />
-									<span className="text-gray-300">
-										Board active time:{" "}
-										{calculateBoardRuntime(
-											conn.boardStartTime,
-											conn.boardStopTime,
-										)}
-									</span>
-								</div>
-							)}
-						</div>
+		<Card>
+			<CardHeader>
+				<div className="flex items-center justify-between">
+					<h2 className="text-xl font-semibold text-white">Usage</h2>
+					{connections.length > 0 && (
 						<Button
-							variant="ghost"
-							size="icon"
-							className="text-red-500 hover:text-red-400"
-							onClick={() => handleDelete(conn.id)}
+							variant="destructive"
+							size="sm"
+							onClick={handleClearAll}
+							className="text-sm"
 						>
-							<Trash2 className="size-4" />
+							Clear
 						</Button>
-					</div>
-				))}
-
-				{connections.length === 0 && (
-					<div className="text-center text-gray-400">
-						No connection history available
-					</div>
-				)}
-			</div>
-
-			<AlertDialog open={showDialog} onOpenChange={setShowDialog}>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>Delete Connection Record</AlertDialogTitle>
-						<AlertDialogDescription>
-							Enter 4-digit password to delete this record
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<div className="space-y-4">
-						<div className="flex justify-center">
-							<InputOTP
-								maxLength={4}
-								value={password}
-								onChange={(value) => setPassword(value)}
+					)}
+				</div>
+			</CardHeader>
+			<CardContent>
+				<div className="mt-6 space-y-4">
+					<div className="space-y-2">
+						{connections.map((conn) => (
+							<div
+								key={conn.id}
+								className="flex items-center justify-between rounded-lg bg-gray-800/50 p-3"
 							>
-								<InputOTPGroup>
-									<InputOTPSlot index={0} />
-									<InputOTPSlot index={1} />
-									<InputOTPSlot index={2} />
-									<InputOTPSlot index={3} />
-								</InputOTPGroup>
-							</InputOTP>
-						</div>
-						{error && (
-							<p className="text-center text-sm text-red-500">{error}</p>
+								<div className="flex-1 space-y-1">
+									<div className="text-sm text-gray-300">
+										Connected: {formatDate(conn.connectTime)}
+									</div>
+									<div className="text-sm text-gray-300">
+										Disconnected: {formatDate(conn.disconnectTime)}
+									</div>
+									{conn.boardStartTime && (
+										<div className="mt-2 space-y-1">
+											<div className="flex items-center gap-2 text-sm">
+												<Power className="size-4 text-green-500" />
+												<span className="text-gray-300">
+													Started: {formatDate(conn.boardStartTime)}
+												</span>
+											</div>
+											<div className="flex items-center gap-2 text-sm">
+												<Power className="size-4 text-red-500" />
+												<span className="text-gray-300">
+													Stopped: {formatDate(conn.boardStopTime)}
+												</span>
+											</div>
+											<div className="flex items-center gap-2 text-sm">
+												<Power className="size-4 text-blue-500" />
+												<span className="text-gray-300">
+													Total active time:{" "}
+													{calculateBoardRuntime(
+														conn.boardStartTime,
+														conn.boardStopTime,
+													)}
+												</span>
+											</div>
+										</div>
+									)}
+								</div>
+								<Button
+									variant="ghost"
+									size="icon"
+									className="text-red-500 hover:text-red-400"
+									onClick={() => handleDelete(conn.id)}
+								>
+									<Trash2 className="size-4" />
+								</Button>
+							</div>
+						))}
+
+						{connections.length === 0 && (
+							<div className="text-center text-gray-400">
+								No connection history available
+							</div>
 						)}
 					</div>
-					<AlertDialogFooter>
-						<AlertDialogCancel onClick={() => setShowDialog(false)}>
-							Cancel
-						</AlertDialogCancel>
-						<Button
-							onClick={confirmDelete}
-							className="bg-red-600 hover:bg-red-700"
-						>
-							Delete
-						</Button>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
-		</div>
+
+					<AlertDialog open={showDialog} onOpenChange={setShowDialog}>
+						<AlertDialogContent>
+							<AlertDialogHeader>
+								<AlertDialogTitle>Delete Connection Record</AlertDialogTitle>
+								<AlertDialogDescription>
+									Enter 4-digit password to delete this record
+								</AlertDialogDescription>
+							</AlertDialogHeader>
+							<div className="space-y-4">
+								<div className="flex justify-center">
+									<InputOTP
+										maxLength={4}
+										value={password}
+										onChange={(value) => setPassword(value)}
+									>
+										<InputOTPGroup>
+											<InputOTPSlot index={0} />
+											<InputOTPSlot index={1} />
+											<InputOTPSlot index={2} />
+											<InputOTPSlot index={3} />
+										</InputOTPGroup>
+									</InputOTP>
+								</div>
+								{error && (
+									<p className="text-center text-sm text-red-500">{error}</p>
+								)}
+							</div>
+							<AlertDialogFooter>
+								<AlertDialogCancel onClick={() => setShowDialog(false)}>
+									Cancel
+								</AlertDialogCancel>
+								<Button
+									onClick={confirmDelete}
+									className="bg-red-600 hover:bg-red-700"
+								>
+									Delete
+								</Button>
+							</AlertDialogFooter>
+						</AlertDialogContent>
+					</AlertDialog>
+				</div>
+			</CardContent>
+		</Card>
 	)
 }
 
