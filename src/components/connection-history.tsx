@@ -14,12 +14,13 @@ import {
 	InputOTPGroup,
 	InputOTPSlot,
 } from "@/components/ui/input-otp"
-import { Trash2, Power } from "lucide-react"
+import { Trash2, Power, Download } from "lucide-react"
 import { useLocalStorage } from "usehooks-ts"
 import { formatDistance, intervalToDuration } from "date-fns"
 import { formatInTimeZone } from "date-fns-tz"
 import { Card, CardContent, CardHeader } from "./ui/card"
 import { Separator } from "@/components/ui/separator"
+import * as XLSX from "xlsx"
 
 interface ConnectionRecord {
 	id: number
@@ -151,11 +152,16 @@ const ConnectionHistory: React.FC<ConnectionHistoryProps> = ({
 		return `${seconds}s`
 	}
 
+	const [action, setAction] = useState<"delete" | "clear" | "download" | null>(
+		null,
+	)
+
 	const handleClearAllClick = (): void => {
 		setShowDialog(true)
 		setPassword("")
 		setError("")
 		setSelectedId(null)
+		setAction("clear")
 	}
 
 	const handleDelete = (id: number): void => {
@@ -163,14 +169,45 @@ const ConnectionHistory: React.FC<ConnectionHistoryProps> = ({
 		setShowDialog(true)
 		setPassword("")
 		setError("")
+		setAction("delete")
+	}
+
+	const handleDownload = (): void => {
+		setShowDialog(true)
+		setPassword("")
+		setError("")
+		setAction("download")
+	}
+
+	const downloadExcel = () => {
+		const data = connections.map((conn) => ({
+			"Connection Time": formatDate(conn.connectTime),
+			"Disconnection Time": formatDate(conn.disconnectTime),
+			"Board Start Time": formatDate(conn.boardStartTime),
+			"Board Stop Time": formatDate(conn.boardStopTime),
+			"Total Active Time": calculateBoardRuntime(
+				conn.boardStartTime,
+				conn.boardStopTime,
+			),
+		}))
+
+		const ws = XLSX.utils.json_to_sheet(data)
+		const wb = XLSX.utils.book_new()
+		XLSX.utils.book_append_sheet(wb, ws, "Usage History")
+
+		// Generate file name with current date
+		const fileName = `usage_history_${new Date().toISOString().split("T")[0]}.xlsx`
+		XLSX.writeFile(wb, fileName)
 	}
 
 	const confirmAction = (): void => {
 		if (password === "1234") {
-			if (selectedId === null) {
+			if (action === "clear") {
 				removeConnections()
-			} else {
+			} else if (action === "delete" && selectedId !== null) {
 				setConnections(connections.filter((conn) => conn.id !== selectedId))
+			} else if (action === "download") {
+				downloadExcel()
 			}
 			setShowDialog(false)
 			setPassword("")
@@ -185,16 +222,29 @@ const ConnectionHistory: React.FC<ConnectionHistoryProps> = ({
 			<CardHeader>
 				<div className="flex items-center justify-between">
 					<h2 className="text-xl font-semibold text-white">Usage</h2>
-					{connections.length > 0 && (
-						<Button
-							variant="destructive"
-							size="sm"
-							onClick={handleClearAllClick}
-							className="text-sm"
-						>
-							Clear
-						</Button>
-					)}
+					<div className="flex gap-2">
+						{connections.length > 0 && (
+							<>
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={handleDownload}
+									className="text-sm"
+								>
+									<Download size={16} className="mr-2" />
+									Export
+								</Button>
+								<Button
+									variant="destructive"
+									size="sm"
+									onClick={handleClearAllClick}
+									className="text-sm"
+								>
+									Clear
+								</Button>
+							</>
+						)}
+					</div>
 				</div>
 			</CardHeader>
 			<CardContent>
@@ -303,7 +353,11 @@ const ConnectionHistory: React.FC<ConnectionHistoryProps> = ({
 									onClick={confirmAction}
 									className="bg-red-600 hover:bg-red-700"
 								>
-									{selectedId === null ? "Clear All" : "Delete"}
+									{action === "clear"
+										? "Clear All"
+										: action === "delete"
+											? "Delete"
+											: "Download"}
 								</Button>
 							</AlertDialogFooter>
 						</AlertDialogContent>
