@@ -14,25 +14,29 @@ import {
 	InputOTPGroup,
 	InputOTPSlot,
 } from "@/components/ui/input-otp"
-import { Trash2 } from "lucide-react"
+import { Trash2, Power } from "lucide-react"
 import { useLocalStorage } from "usehooks-ts"
-import { formatDistance } from "date-fns"
+import { formatDistance, intervalToDuration } from "date-fns"
 import { formatInTimeZone } from "date-fns-tz"
 
 interface ConnectionRecord {
 	id: number
 	connectTime: string
 	disconnectTime: string | null
+	boardStartTime: string | null
+	boardStopTime: string | null
 }
 
 interface ConnectionHistoryProps {
 	isConnected: boolean
+	isRunning: boolean
 }
 
 const EST_TIMEZONE = "America/New_York"
 
 const ConnectionHistory: React.FC<ConnectionHistoryProps> = ({
 	isConnected,
+	isRunning,
 }) => {
 	const [connections, setConnections, removeConnections] = useLocalStorage<
 		ConnectionRecord[]
@@ -42,6 +46,7 @@ const ConnectionHistory: React.FC<ConnectionHistoryProps> = ({
 	const [showDialog, setShowDialog] = useState<boolean>(false)
 	const [error, setError] = useState<string>("")
 	const prevConnectedRef = useRef<boolean>(isConnected)
+	const prevRunningRef = useRef<boolean>(isRunning)
 
 	useEffect(() => {
 		if (prevConnectedRef.current !== isConnected) {
@@ -50,6 +55,8 @@ const ConnectionHistory: React.FC<ConnectionHistoryProps> = ({
 					id: Date.now(),
 					connectTime: new Date().toISOString(),
 					disconnectTime: null,
+					boardStartTime: null,
+					boardStopTime: null,
 				}
 				setConnections((prev) => [...prev, newConnection])
 			} else {
@@ -61,6 +68,9 @@ const ConnectionHistory: React.FC<ConnectionHistoryProps> = ({
 							{
 								...lastConnection,
 								disconnectTime: new Date().toISOString(),
+								boardStopTime: lastConnection.boardStartTime
+									? new Date().toISOString()
+									: null,
 							},
 						]
 					}
@@ -69,26 +79,76 @@ const ConnectionHistory: React.FC<ConnectionHistoryProps> = ({
 			}
 			prevConnectedRef.current = isConnected
 		}
-	}, [isConnected, setConnections])
+
+		// Track board start/stop times
+		if (prevRunningRef.current !== isRunning) {
+			setConnections((prev) => {
+				const lastConnection = prev[prev.length - 1]
+				if (lastConnection) {
+					if (isRunning) {
+						return [
+							...prev.slice(0, -1),
+							{
+								...lastConnection,
+								boardStartTime: new Date().toISOString(),
+								boardStopTime: null,
+							},
+						]
+					} else {
+						return [
+							...prev.slice(0, -1),
+							{
+								...lastConnection,
+								boardStopTime: new Date().toISOString(),
+							},
+						]
+					}
+				}
+				return prev
+			})
+			prevRunningRef.current = isRunning
+		}
+	}, [isConnected, isRunning, setConnections])
 
 	const formatDate = (dateString: string | null): string => {
 		if (!dateString) return "Active"
 
 		const date = new Date(dateString)
 
-		// Format the date in EST
 		const formattedDate = formatInTimeZone(
 			date,
 			EST_TIMEZONE,
 			"MMM d, yyyy h:mm:ss a zzz",
 		)
 
-		// Add relative time
 		const relativeTime = formatDistance(date, new Date(), {
 			addSuffix: true,
 		})
 
 		return `${formattedDate} (${relativeTime})`
+	}
+
+	const calculateBoardRuntime = (
+		startTime: string | null,
+		stopTime: string | null,
+	): string => {
+		if (!startTime) return "Never started"
+		if (!stopTime) return "Currently running"
+
+		const start = new Date(startTime)
+		const stop = new Date(stopTime)
+		const duration = intervalToDuration({ start, end: stop })
+
+		const hours = duration.hours || 0
+		const minutes = duration.minutes || 0
+		const seconds = duration.seconds || 0
+
+		if (hours > 0) {
+			return `${hours}h ${minutes}m ${seconds}s`
+		} else if (minutes > 0) {
+			return `${minutes}m ${seconds}s`
+		}
+		return `${seconds}s`
 	}
 
 	const handleDelete = (id: number): void => {
@@ -102,6 +162,7 @@ const ConnectionHistory: React.FC<ConnectionHistoryProps> = ({
 		if (password === "1234") {
 			setConnections(connections.filter((conn) => conn.id !== selectedId))
 			setShowDialog(false)
+			setPassword("")
 			setError("")
 		} else {
 			setError("Incorrect password")
@@ -141,6 +202,18 @@ const ConnectionHistory: React.FC<ConnectionHistoryProps> = ({
 							<div className="text-sm text-gray-300">
 								Disconnected: {formatDate(conn.disconnectTime)}
 							</div>
+							{conn.boardStartTime && (
+								<div className="mt-2 flex items-center gap-2 text-sm">
+									<Power className="size-4 text-green-500" />
+									<span className="text-gray-300">
+										Board active time:{" "}
+										{calculateBoardRuntime(
+											conn.boardStartTime,
+											conn.boardStopTime,
+										)}
+									</span>
+								</div>
+							)}
 						</div>
 						<Button
 							variant="ghost"

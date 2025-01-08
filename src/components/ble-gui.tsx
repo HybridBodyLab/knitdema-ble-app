@@ -481,7 +481,7 @@ const BleGUI: React.FC = () => {
 				</span>
 				{/* To show the connection history */}
 				<div className="flex items-center justify-center text-xl text-blue-600">
-					<ConnectionHistory isConnected={isConnected} />
+					<ConnectionHistory isConnected={isConnected} isRunning={isRunning} />
 				</div>
 			</Card>
 		</div>
