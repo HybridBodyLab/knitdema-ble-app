@@ -19,6 +19,7 @@ import { useLocalStorage } from "usehooks-ts"
 import { formatDistance, intervalToDuration } from "date-fns"
 import { formatInTimeZone } from "date-fns-tz"
 import { Card, CardContent, CardHeader } from "./ui/card"
+import { Separator } from "@/components/ui/separator"
 
 interface ConnectionRecord {
 	id: number
@@ -152,6 +153,13 @@ const ConnectionHistory: React.FC<ConnectionHistoryProps> = ({
 		return `${seconds}s`
 	}
 
+	const handleClearAllClick = (): void => {
+		setShowDialog(true)
+		setPassword("")
+		setError("")
+		setSelectedId(null)
+	}
+
 	const handleDelete = (id: number): void => {
 		setSelectedId(id)
 		setShowDialog(true)
@@ -159,19 +167,19 @@ const ConnectionHistory: React.FC<ConnectionHistoryProps> = ({
 		setError("")
 	}
 
-	const confirmDelete = (): void => {
+	const confirmAction = (): void => {
 		if (password === "1234") {
-			setConnections(connections.filter((conn) => conn.id !== selectedId))
+			if (selectedId === null) {
+				removeConnections()
+			} else {
+				setConnections(connections.filter((conn) => conn.id !== selectedId))
+			}
 			setShowDialog(false)
 			setPassword("")
 			setError("")
 		} else {
 			setError("Incorrect password")
 		}
-	}
-
-	const handleClearAll = (): void => {
-		removeConnections()
 	}
 
 	return (
@@ -183,7 +191,7 @@ const ConnectionHistory: React.FC<ConnectionHistoryProps> = ({
 						<Button
 							variant="destructive"
 							size="sm"
-							onClick={handleClearAll}
+							onClick={handleClearAllClick}
 							className="text-sm"
 						>
 							Clear
@@ -192,7 +200,7 @@ const ConnectionHistory: React.FC<ConnectionHistoryProps> = ({
 				</div>
 			</CardHeader>
 			<CardContent>
-				<div className="mt-6 space-y-4">
+				<div className="space-y-4">
 					<div className="space-y-2">
 						{connections.map((conn) => (
 							<div
@@ -207,30 +215,34 @@ const ConnectionHistory: React.FC<ConnectionHistoryProps> = ({
 										Disconnected: {formatDate(conn.disconnectTime)}
 									</div>
 									{conn.boardStartTime && (
-										<div className="mt-2 space-y-1">
-											<div className="flex items-center gap-2 text-sm">
-												<Power className="size-4 text-green-500" />
-												<span className="text-gray-300">
-													Started: {formatDate(conn.boardStartTime)}
-												</span>
+										<>
+											<Separator className="my-2 bg-gray-700" />
+											<div className="space-y-2">
+												<div className="flex items-center gap-2 text-sm">
+													<Power size={16} className="text-green-500" />
+													<span className="text-gray-300">
+														Started: {formatDate(conn.boardStartTime)}
+													</span>
+												</div>
+												<div className="flex items-center gap-2 text-sm">
+													<Power size={16} className="text-red-500" />
+													<span className="text-gray-300">
+														Stopped: {formatDate(conn.boardStopTime)}
+													</span>
+												</div>
+												<Separator className="my-2 bg-gray-700" />
+												<div className="flex items-center gap-2 text-sm">
+													<Power size={16} className="text-blue-500" />
+													<span className="text-gray-300">
+														Total active time:{" "}
+														{calculateBoardRuntime(
+															conn.boardStartTime,
+															conn.boardStopTime,
+														)}
+													</span>
+												</div>
 											</div>
-											<div className="flex items-center gap-2 text-sm">
-												<Power className="size-4 text-red-500" />
-												<span className="text-gray-300">
-													Stopped: {formatDate(conn.boardStopTime)}
-												</span>
-											</div>
-											<div className="flex items-center gap-2 text-sm">
-												<Power className="size-4 text-blue-500" />
-												<span className="text-gray-300">
-													Total active time:{" "}
-													{calculateBoardRuntime(
-														conn.boardStartTime,
-														conn.boardStopTime,
-													)}
-												</span>
-											</div>
-										</div>
+										</>
 									)}
 								</div>
 								<Button
@@ -239,7 +251,7 @@ const ConnectionHistory: React.FC<ConnectionHistoryProps> = ({
 									className="text-red-500 hover:text-red-400"
 									onClick={() => handleDelete(conn.id)}
 								>
-									<Trash2 className="size-4" />
+									<Trash2 size={16} />
 								</Button>
 							</div>
 						))}
@@ -254,9 +266,16 @@ const ConnectionHistory: React.FC<ConnectionHistoryProps> = ({
 					<AlertDialog open={showDialog} onOpenChange={setShowDialog}>
 						<AlertDialogContent>
 							<AlertDialogHeader>
-								<AlertDialogTitle>Delete Connection Record</AlertDialogTitle>
+								<AlertDialogTitle>
+									{selectedId === null
+										? "Clear All History"
+										: "Delete Connection Record"}
+								</AlertDialogTitle>
 								<AlertDialogDescription>
-									Enter 4-digit password to delete this record
+									Enter 4-digit password to{" "}
+									{selectedId === null
+										? "clear all history"
+										: "delete this record"}
 								</AlertDialogDescription>
 							</AlertDialogHeader>
 							<div className="space-y-4">
@@ -283,10 +302,10 @@ const ConnectionHistory: React.FC<ConnectionHistoryProps> = ({
 									Cancel
 								</AlertDialogCancel>
 								<Button
-									onClick={confirmDelete}
+									onClick={confirmAction}
 									className="bg-red-600 hover:bg-red-700"
 								>
-									Delete
+									{selectedId === null ? "Clear All" : "Delete"}
 								</Button>
 							</AlertDialogFooter>
 						</AlertDialogContent>
