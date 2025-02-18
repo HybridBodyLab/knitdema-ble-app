@@ -308,9 +308,9 @@ const BleGUI: React.FC = () => {
 		const stopTime = addMinutes(startTime, SESSION_DURATION_MINUTES)
 		const timeUntilStop = stopTime.getTime() - new Date().getTime()
 
-		const timeoutId = window.setTimeout(() => {
-			handleDisconnect()
-			createSessionEndAlert()
+		const timeoutId = window.setTimeout(async () => {
+			await handleDisconnect()
+			await createSessionEndAlert()
 		}, timeUntilStop)
 
 		return () => window.clearTimeout(timeoutId)
