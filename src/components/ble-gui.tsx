@@ -290,10 +290,10 @@ const BleGUI: React.FC = () => {
 			return () => {}
 		}
 
-		const stopTime = startTime.getTime() + SESSION_DURATION_MINUTES * 60 * 1000
+		const stopTime = addMinutes(startTime, SESSION_DURATION_MINUTES)
 
 		const updateCountdown = () => {
-			const remaining = Math.max(0, Math.floor((stopTime - Date.now()) / 1000))
+			const remaining = differenceInSeconds(stopTime, new Date())
 			setRemainingTime(formatRemainingTime(remaining))
 		}
 
@@ -305,16 +305,13 @@ const BleGUI: React.FC = () => {
 	useEffect(() => {
 		if (!isRunning || !startTime) return () => {}
 
-		const stopTime = startTime.getTime() + SESSION_DURATION_MINUTES * 60 * 1000
-		const timeUntilStop = stopTime - Date.now()
+		const stopTime = addMinutes(startTime, SESSION_DURATION_MINUTES)
+		const timeUntilStop = stopTime.getTime() - new Date().getTime()
 
-		const timeoutId = window.setTimeout(
-			async () => {
-				await handleDisconnect()
-				await createSessionEndAlert()
-			},
-			Math.max(0, timeUntilStop),
-		)
+		const timeoutId = window.setTimeout(async () => {
+			await handleDisconnect()
+			await createSessionEndAlert()
+		}, timeUntilStop)
 
 		return () => window.clearTimeout(timeoutId)
 	}, [isRunning, startTime, playAlert])
