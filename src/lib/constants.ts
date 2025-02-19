@@ -1,2 +1,2 @@
 // src/lib/constants.ts
-export const SESSION_DURATION_MINUTES = 30
+export const SESSION_DURATION_MINUTES = 25
