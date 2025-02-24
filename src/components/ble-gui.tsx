@@ -283,7 +283,8 @@ const BleGUI: React.FC = () => {
 		})
 		processQueue()
 	}, [isRunning, readCharacteristic])
-
+	
+	//set calculate stop time
 	useEffect(() => {
 		if (!isRunning || !startTime) {
 			setRemainingTime(formatRemainingTime(SESSION_DURATION_MINUTES * 60))
@@ -291,6 +292,8 @@ const BleGUI: React.FC = () => {
 		}
 
 		const stopTime = addMinutes(startTime, SESSION_DURATION_MINUTES)
+		console.log("Session started at:", startTime);
+    	console.log("Expected stop time:", stopTime);
 
 		const updateCountdown = () => {
 			const remaining = differenceInSeconds(stopTime, new Date())
@@ -302,20 +305,25 @@ const BleGUI: React.FC = () => {
 		return () => window.clearInterval(intervalId)
 	}, [isRunning, startTime])
 
+	// when a new start time is set, set a timeout to disconnect and create an alert
+	// run one time at the start of the session
 	useEffect(() => {
 		if (!isRunning || !startTime) return () => {}
 
-		const stopTime = addMinutes(startTime, SESSION_DURATION_MINUTES)
-		const timeUntilStop = stopTime.getTime() - new Date().getTime()
-
-		const timeoutId = window.setTimeout(async () => {
-			await handleDisconnect()
-			await createSessionEndAlert()
-		}, timeUntilStop)
-
-		return () => window.clearTimeout(timeoutId)
+		const checkStopTime = () => {
+			const stopTime = addMinutes(startTime, SESSION_DURATION_MINUTES);
+			if (new Date() >= stopTime) {
+				handleDisconnect();
+				createSessionEndAlert();
+			}
+		};
+	
+		const intervalId = setInterval(checkStopTime, 5000); // Check every 5 seconds
+	
+		return () => clearInterval(intervalId);
 	}, [isRunning, startTime, playAlert])
 
+	// read the characteristics (which SMA firing, etc.) every 100ms
 	useEffect(() => {
 		if (isRunning) {
 			intervalIdRef.current = window.setInterval(readCharacteristics, 100)
@@ -335,6 +343,7 @@ const BleGUI: React.FC = () => {
 		}
 	}, [isRunning, readCharacteristics])
 
+	// disconnect from the board and set the start time to null
 	const handleDisconnect = async () => {
 		const finalReadings = await disconnectBle()
 		if (finalReadings) {
