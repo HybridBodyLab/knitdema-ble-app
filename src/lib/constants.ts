@@ -3,6 +3,19 @@ import { LinePosition } from "@/components/glowing-progress-lines"
 // src/lib/constants.ts
 export const SESSION_DURATION_MINUTES = 30
 
+// Function to get current session duration
+let currentSessionDuration = SESSION_DURATION_MINUTES
+export const getCurrentSessionDuration = () => currentSessionDuration
+export const setCurrentSessionDuration = (duration: number) => {
+	currentSessionDuration = duration
+}
+
+export const SESSION_DURATION_OPTIONS = [
+	{ value: "30", label: "30 minutes" },
+	{ value: "45", label: "45 minutes" },
+	{ value: "60", label: "1 hour" },
+]
+
 export const linePositions: Record<string, LinePosition[]> = {
 	thumb: [
 		{

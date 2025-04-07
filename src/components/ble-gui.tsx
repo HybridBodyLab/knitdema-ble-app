@@ -7,7 +7,12 @@ import { Button } from "./ui/button"
 import { Card } from "./ui/card"
 import StatusPanel from "./status-panel"
 import { addMinutes, differenceInSeconds, format } from "date-fns"
-import { linePositions, SESSION_DURATION_MINUTES } from "@/lib/constants"
+import {
+	linePositions,
+	SESSION_DURATION_OPTIONS,
+	getCurrentSessionDuration,
+	setCurrentSessionDuration,
+} from "@/lib/constants"
 import gloveImage from "/src/assets/glove.png"
 import audio from "/src/assets/notification.mp3"
 import GlowingProgressLines from "@/components/glowing-progress-lines"
@@ -15,6 +20,13 @@ import ConnectionHistory from "./connection-history"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import { Label } from "./ui/label"
 import { ColoredSlider } from "./ui/slider-colored"
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "./ui/select"
 
 const BleGUI: React.FC = () => {
 	const [receivedData, setReceivedData] = useState<
@@ -32,9 +44,12 @@ const BleGUI: React.FC = () => {
 
 	const [startTime, setStartTime] = useState<Date | null>(null)
 	const [remainingTime, setRemainingTime] = useState<string>(
-		format(new Date(SESSION_DURATION_MINUTES * 60 * 1000), "mm:ss"),
+		format(new Date(getCurrentSessionDuration() * 60 * 1000), "mm:ss"),
 	)
 	const [playAlert, setPlayAlert] = useState<boolean>(true)
+	const [sessionDuration, setSessionDuration] = useState<string>(
+		getCurrentSessionDuration().toString(),
+	)
 
 	const {
 		connectionStatus,
@@ -111,14 +126,23 @@ const BleGUI: React.FC = () => {
 		processQueue()
 	}, [isRunning, readCharacteristic])
 
+	// Handle session duration change
+	const handleSessionDurationChange = (value: string) => {
+		setSessionDuration(value)
+		// Update the session duration
+		setCurrentSessionDuration(parseInt(value))
+		// Update the remaining time display
+		setRemainingTime(formatRemainingTime(parseInt(value) * 60))
+	}
+
 	//set calculate stop time
 	useEffect(() => {
 		if (!isRunning || !startTime) {
-			setRemainingTime(formatRemainingTime(SESSION_DURATION_MINUTES * 60))
+			setRemainingTime(formatRemainingTime(getCurrentSessionDuration() * 60))
 			return () => {}
 		}
 
-		const stopTime = addMinutes(startTime, SESSION_DURATION_MINUTES)
+		const stopTime = addMinutes(startTime, getCurrentSessionDuration())
 		console.log("Session started at:", startTime)
 		console.log("Expected stop time:", stopTime)
 
@@ -138,7 +162,7 @@ const BleGUI: React.FC = () => {
 		if (!isRunning || !startTime) return () => {}
 
 		const checkStopTime = () => {
-			const stopTime = addMinutes(startTime, SESSION_DURATION_MINUTES)
+			const stopTime = addMinutes(startTime, getCurrentSessionDuration())
 			if (new Date() >= stopTime) {
 				handleDisconnect()
 				createSessionEndAlert()
@@ -266,6 +290,34 @@ const BleGUI: React.FC = () => {
 								>
 									Stop Board
 								</Button>
+							</div>
+
+							<div className="flex flex-col space-y-4 rounded-lg bg-muted/50 p-3">
+								<div className="flex items-center space-x-2">
+									<Label
+										htmlFor="session-duration"
+										className="whitespace-nowrap text-sm font-medium text-muted-foreground"
+									>
+										Session Duration:
+									</Label>
+									<Select
+										value={sessionDuration}
+										onValueChange={handleSessionDurationChange}
+										disabled={isRunning}
+									>
+										<SelectTrigger id="session-duration" className="w-full">
+											<SelectValue placeholder="Select duration" />
+										</SelectTrigger>
+										<SelectContent>
+											{SESSION_DURATION_OPTIONS.map((option) => (
+												<SelectItem key={option.value} value={option.value}>
+													{option.label}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+								</div>
+
 								<label className="flex items-center space-x-2 text-foreground">
 									<input
 										type="checkbox"
@@ -290,7 +342,7 @@ const BleGUI: React.FC = () => {
 									<span className="text-center text-sm text-rose-600 dark:text-rose-400 sm:text-left">
 										{formatRemainingTimeDisplay(
 											differenceInSeconds(
-												addMinutes(startTime!, SESSION_DURATION_MINUTES),
+												addMinutes(startTime!, getCurrentSessionDuration()),
 												new Date(),
 											),
 										)}
