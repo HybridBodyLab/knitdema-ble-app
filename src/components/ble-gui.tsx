@@ -12,9 +12,9 @@ import gloveImage from "/src/assets/glove.png"
 import audio from "/src/assets/notification.mp3"
 import GlowingProgressLines from "@/components/glowing-progress-lines"
 import ConnectionHistory from "./connection-history"
-import { Slider } from "./ui/slider"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import { Label } from "./ui/label"
+import { ColoredSlider } from "./ui/slider-colored"
 
 const BleGUI: React.FC = () => {
 	const [receivedData, setReceivedData] = useState<
@@ -336,20 +336,22 @@ const BleGUI: React.FC = () => {
 													</Label>
 													<span className="text-sm text-gray-400">(0-5)</span>
 												</div>
-												<Slider
+												<ColoredSlider
 													id={`${key}-pwm-level`}
 													min={0}
 													max={5}
 													step={1}
-													defaultValue={[pwmLevels[key]]}
+													value={[pwmLevels[key]]}
 													onValueChange={(value) =>
 														handlePwmLevelChange(key, value)
 													}
+													level={pwmLevels[key]}
 													className="w-full"
 												/>
 												<div className="flex justify-between text-xs text-gray-400">
-													<span>Min</span>
-													<span>Max</span>
+													<span className="text-green-500">Low</span>
+													<span className="text-yellow-500">Medium</span>
+													<span className="text-red-500">High</span>
 												</div>
 											</div>
 										</TabsContent>

@@ -3,7 +3,8 @@ import {
 	CharacteristicKeys,
 	SERVICE_UUID,
 } from "@/constants"
-import { useState, useCallback, useRef } from "react"
+import { useState, useCallback, useRef, useEffect } from "react"
+import { useLocalStorage } from "usehooks-ts"
 
 export const useBluetoothConnection = () => {
 	const [connectionStatus, setConnectionStatus] = useState("Disconnected")
@@ -16,15 +17,45 @@ export const useBluetoothConnection = () => {
 	> | null>(null)
 	const deviceRef = useRef<BluetoothDevice | null>(null)
 
-	// Add active PWM levels state to track current levels
-	const [pwmLevels, setPwmLevels] = useState<Record<string, number>>({
-		thumb: 0,
-		index: 0,
-		middle: 0,
-		ring: 0,
-		pinky: 0,
-		palm: 0,
-	})
+	// Add active PWM levels state with localStorage and default to level 3
+	const [pwmLevels, setPwmLevels] = useLocalStorage<Record<string, number>>(
+		"pwm-levels",
+		{
+			thumb: 3,
+			index: 3,
+			middle: 3,
+			ring: 3,
+			pinky: 3,
+			palm: 3,
+		},
+	)
+
+	// Apply saved PWM levels on connection
+	useEffect(() => {
+		if (isConnected && characteristicsRef.current) {
+			const applyStoredLevels = async () => {
+				// Small delay to ensure the board is ready
+				await new Promise((resolve) => setTimeout(resolve, 1000))
+
+				for (const [key, level] of Object.entries(pwmLevels)) {
+					if (Object.keys(CHARACTERISTIC_UUIDS).includes(key)) {
+						try {
+							const encoder = new TextEncoder()
+							const value = encoder.encode(level.toString())
+							await characteristicsRef.current?.[
+								key as CharacteristicKeys
+							]?.writeValue(value)
+							console.log(`Applied stored PWM level for ${key}: ${level}`)
+						} catch (error) {
+							console.error(`Failed to apply PWM level for ${key}:`, error)
+						}
+					}
+				}
+			}
+
+			applyStoredLevels()
+		}
+	}, [isConnected, pwmLevels])
 
 	const connectToBle = async () => {
 		try {
@@ -172,7 +203,7 @@ export const useBluetoothConnection = () => {
 				return false
 			}
 		},
-		[],
+		[setPwmLevels],
 	)
 
 	const disconnectBle = async () => {
