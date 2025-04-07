@@ -221,7 +221,7 @@ const ConnectionHistory: React.FC<ConnectionHistoryProps> = ({
 		<Card>
 			<CardHeader>
 				<div className="flex items-center justify-between">
-					<h2 className="text-xl font-semibold text-white">Usage</h2>
+					<h2 className="text-xl font-semibold">Usage</h2>
 					<div className="flex gap-2">
 						{connections.length > 0 && (
 							<>
@@ -253,35 +253,41 @@ const ConnectionHistory: React.FC<ConnectionHistoryProps> = ({
 						{connections.map((conn) => (
 							<div
 								key={conn.id}
-								className="flex items-center justify-between rounded-lg bg-gray-800/50 p-3"
+								className="flex items-center justify-between rounded-lg bg-muted/50 p-3"
 							>
 								<div className="flex-1 space-y-1">
-									<div className="text-sm text-gray-300">
+									<div className="text-sm text-muted-foreground">
 										Connected: {formatDate(conn.connectTime)}
 									</div>
-									<div className="text-sm text-gray-300">
+									<div className="text-sm text-muted-foreground">
 										Disconnected: {formatDate(conn.disconnectTime)}
 									</div>
 									{conn.boardStartTime && (
 										<>
-											<Separator className="my-2 bg-gray-700" />
+											<Separator className="my-2 bg-border" />
 											<div className="space-y-2">
 												<div className="flex items-center gap-2 text-sm">
-													<Power size={16} className="text-green-500" />
-													<span className="text-gray-300">
+													<Power
+														size={16}
+														className="text-emerald-600 dark:text-emerald-500"
+													/>
+													<span className="text-muted-foreground">
 														Started: {formatDate(conn.boardStartTime)}
 													</span>
 												</div>
 												<div className="flex items-center gap-2 text-sm">
-													<Power size={16} className="text-red-500" />
-													<span className="text-gray-300">
+													<Power
+														size={16}
+														className="text-rose-600 dark:text-rose-500"
+													/>
+													<span className="text-muted-foreground">
 														Stopped: {formatDate(conn.boardStopTime)}
 													</span>
 												</div>
-												<Separator className="my-2 bg-gray-700" />
+												<Separator className="my-2 bg-border" />
 												<div className="flex items-center gap-2 text-sm">
-													<Power size={16} className="text-blue-500" />
-													<span className="text-gray-300">
+													<Power size={16} className="text-primary" />
+													<span className="text-muted-foreground">
 														Total active time:{" "}
 														{calculateBoardRuntime(
 															conn.boardStartTime,
@@ -296,7 +302,7 @@ const ConnectionHistory: React.FC<ConnectionHistoryProps> = ({
 								<Button
 									variant="ghost"
 									size="icon"
-									className="text-red-500 hover:text-red-400"
+									className="text-destructive hover:text-destructive/80"
 									onClick={() => handleDelete(conn.id)}
 								>
 									<Trash2 size={16} />
@@ -305,7 +311,7 @@ const ConnectionHistory: React.FC<ConnectionHistoryProps> = ({
 						))}
 
 						{connections.length === 0 && (
-							<div className="text-center text-gray-400">
+							<div className="text-center text-muted-foreground">
 								No connection history available
 							</div>
 						)}
@@ -342,17 +348,16 @@ const ConnectionHistory: React.FC<ConnectionHistoryProps> = ({
 									</InputOTP>
 								</div>
 								{error && (
-									<p className="text-center text-sm text-red-500">{error}</p>
+									<p className="text-center text-sm text-destructive">
+										{error}
+									</p>
 								)}
 							</div>
 							<AlertDialogFooter>
 								<AlertDialogCancel onClick={() => setShowDialog(false)}>
 									Cancel
 								</AlertDialogCancel>
-								<Button
-									onClick={confirmAction}
-									className="bg-red-600 hover:bg-red-700"
-								>
+								<Button onClick={confirmAction} variant="destructive">
 									{action === "clear"
 										? "Clear All"
 										: action === "delete"

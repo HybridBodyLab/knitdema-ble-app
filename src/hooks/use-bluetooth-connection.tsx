@@ -3,7 +3,8 @@ import {
 	CharacteristicKeys,
 	SERVICE_UUID,
 } from "@/constants"
-import { useState, useCallback, useRef } from "react"
+import { useState, useCallback, useRef, useEffect } from "react"
+import { useLocalStorage } from "usehooks-ts"
 
 export const useBluetoothConnection = () => {
 	const [connectionStatus, setConnectionStatus] = useState("Disconnected")
@@ -15,6 +16,46 @@ export const useBluetoothConnection = () => {
 		BluetoothRemoteGATTCharacteristic
 	> | null>(null)
 	const deviceRef = useRef<BluetoothDevice | null>(null)
+
+	// Add active PWM levels state with localStorage and default to level 3
+	const [pwmLevels, setPwmLevels] = useLocalStorage<Record<string, number>>(
+		"pwm-levels",
+		{
+			thumb: 3,
+			index: 3,
+			middle: 3,
+			ring: 3,
+			pinky: 3,
+			palm: 3,
+		},
+	)
+
+	// Apply saved PWM levels on connection
+	useEffect(() => {
+		if (isConnected && characteristicsRef.current) {
+			const applyStoredLevels = async () => {
+				// Small delay to ensure the board is ready
+				await new Promise((resolve) => setTimeout(resolve, 1000))
+
+				for (const [key, level] of Object.entries(pwmLevels)) {
+					if (Object.keys(CHARACTERISTIC_UUIDS).includes(key)) {
+						try {
+							const encoder = new TextEncoder()
+							const value = encoder.encode(level.toString())
+							await characteristicsRef.current?.[
+								key as CharacteristicKeys
+							]?.writeValue(value)
+							console.log(`Applied stored PWM level for ${key}: ${level}`)
+						} catch (error) {
+							console.error(`Failed to apply PWM level for ${key}:`, error)
+						}
+					}
+				}
+			}
+
+			applyStoredLevels()
+		}
+	}, [isConnected, pwmLevels])
 
 	const connectToBle = async () => {
 		try {
@@ -129,6 +170,42 @@ export const useBluetoothConnection = () => {
 		}
 	}, [readAllCharacteristics])
 
+	// Add setPwmLevel function
+	const setPwmLevel = useCallback(
+		async (key: CharacteristicKeys, level: number) => {
+			if (!characteristicsRef.current) {
+				setErrorMessage("Not connected to the board")
+				return false
+			}
+
+			if (level < 0 || level > 5) {
+				setErrorMessage("PWM level must be between 0 and 5")
+				return false
+			}
+
+			try {
+				const encoder = new TextEncoder()
+				const value = encoder.encode(level.toString())
+				await characteristicsRef.current[key].writeValue(value)
+
+				// Update the PWM level state
+				setPwmLevels((prev) => ({
+					...prev,
+					[key]: level,
+				}))
+
+				setConnectionStatus(
+					`${key.charAt(0).toUpperCase() + key.slice(1)} PWM level set to ${level}`,
+				)
+				return true
+			} catch (error) {
+				setErrorMessage(`Error setting PWM level: ${(error as Error).message}`)
+				return false
+			}
+		},
+		[setPwmLevels],
+	)
+
 	const disconnectBle = async () => {
 		let finalReadings = null
 		if (isRunning) {
@@ -154,10 +231,12 @@ export const useBluetoothConnection = () => {
 		errorMessage,
 		isConnected,
 		isRunning,
+		pwmLevels,
 		connectToBle,
 		disconnectBle,
 		startBoard,
 		stopBoard,
 		readCharacteristic,
+		setPwmLevel,
 	}
 }
