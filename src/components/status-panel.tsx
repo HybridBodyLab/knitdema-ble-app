@@ -16,19 +16,20 @@ const StatusPanel: React.FC<StatusPanelProps> = ({
 	<Card className="mb-4 p-3 text-sm">
 		<div className="flex items-center justify-between">
 			<span>
-				Status: <span className="text-blue-400">{connectionStatus}</span>
+				Status:{" "}
+				<span className="font-medium text-primary">{connectionStatus}</span>
 			</span>
-			<span className="flex items-center ">
+			<span className="flex items-center">
 				{isRunning ? (
-					<CheckCircle className="mr-1 size-4 text-green-400" />
+					<CheckCircle className="mr-1 size-4 text-emerald-600 dark:text-emerald-500" />
 				) : (
-					<XCircle className="mr-1 size-4 text-red-400" />
+					<XCircle className="mr-1 size-4 text-rose-600 dark:text-rose-500" />
 				)}
 				{isRunning ? "Running" : "Stopped"}
 			</span>
 		</div>
 		{errorMessage && (
-			<div className="mt-2 flex items-center text-red-400">
+			<div className="mt-2 flex items-center text-destructive">
 				<AlertTriangle className="mr-1 h-4 w-4" />
 				<span>{errorMessage}</span>
 			</div>

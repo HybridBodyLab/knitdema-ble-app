@@ -12,21 +12,25 @@ const ColoredSlider = React.forwardRef<
 	ColoredSliderProps
 >(({ className, level, ...props }, ref) => {
 	const getTrackColor = (level: number) => {
-		if (level <= 1) return "bg-green-200"
-		if (level <= 3) return "bg-yellow-200"
-		return "bg-red-200"
+		if (level <= 1) return "bg-emerald-100 dark:bg-emerald-950/40"
+		if (level <= 3) return "bg-amber-100 dark:bg-amber-950/40"
+		return "bg-rose-100 dark:bg-rose-950/40"
 	}
 
 	const getRangeColor = (level: number) => {
-		if (level <= 1) return "bg-gradient-to-r from-green-600 to-green-400"
-		if (level <= 3) return "bg-gradient-to-r from-yellow-600 to-yellow-400"
-		return "bg-gradient-to-r from-red-600 to-red-400"
+		if (level <= 1) return "bg-emerald-600 dark:bg-emerald-500"
+		if (level <= 3) return "bg-amber-600 dark:bg-amber-500"
+		return "bg-rose-600 dark:bg-rose-500"
 	}
 
 	const getThumbColor = (level: number) => {
-		if (level <= 1) return "border-green-600 bg-green-500 hover:bg-green-600"
-		if (level <= 3) return "border-yellow-600 bg-yellow-500 hover:bg-yellow-600"
-		return "border-red-600 bg-red-500 hover:bg-red-600"
+		if (level <= 1) {
+			return "border-emerald-600 bg-emerald-500 hover:bg-emerald-600 dark:border-emerald-400 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+		}
+		if (level <= 3) {
+			return "border-amber-600 bg-amber-500 hover:bg-amber-600 dark:border-amber-400 dark:bg-amber-500 dark:hover:bg-amber-400"
+		}
+		return "border-rose-600 bg-rose-500 hover:bg-rose-600 dark:border-rose-400 dark:bg-rose-500 dark:hover:bg-rose-400"
 	}
 
 	return (

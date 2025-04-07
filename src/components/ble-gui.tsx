@@ -235,16 +235,13 @@ const BleGUI: React.FC = () => {
 
 	return (
 		<div className="flex min-h-screen flex-col items-center p-4 sm:p-8">
-			<Card className="w-full max-w-3xl rounded-lg p-4 text-white shadow-md sm:p-6">
+			<Card className="w-full max-w-3xl rounded-lg p-4 shadow-md sm:p-6">
 				<div className="flex flex-col space-y-4">
 					<div className="w-full">
 						<Button
 							onClick={isConnected ? handleDisconnect : connectToBle}
-							className={`w-full rounded-md border border-gray-600 px-4 py-2 text-white sm:w-auto ${
-								isConnected
-									? "bg-red-600 hover:bg-red-700"
-									: "bg-blue-600 hover:bg-blue-700"
-							}`}
+							variant={isConnected ? "destructive" : "default"}
+							className="w-full sm:w-auto"
 						>
 							{isConnected ? "Disconnect" : "Connect"}
 						</Button>
@@ -255,40 +252,42 @@ const BleGUI: React.FC = () => {
 							<div className="grid grid-cols-2 gap-3 sm:flex sm:flex-row sm:space-x-4">
 								<Button
 									onClick={handleStartBoard}
-									className="rounded-md border border-gray-600 bg-green-600 px-4 py-2 text-white hover:bg-green-700"
+									variant="outline"
+									className="bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-700"
 									disabled={isRunning}
 								>
 									Start Board
 								</Button>
 								<Button
 									onClick={handleStopBoard}
-									className="rounded-md border border-gray-600 bg-red-600 px-4 py-2 text-white hover:bg-red-700"
+									variant="outline"
+									className="bg-rose-600 text-white hover:bg-rose-700 dark:bg-rose-600 dark:hover:bg-rose-700"
 									disabled={!isRunning}
 								>
 									Stop Board
 								</Button>
-								<label className="flex items-center space-x-2 text-blue-500">
+								<label className="flex items-center space-x-2 text-foreground">
 									<input
 										type="checkbox"
 										checked={playAlert}
 										onChange={(e) => setPlayAlert(e.target.checked)}
-										className="form-checkbox rounded text-blue-600 focus:ring-2 focus:ring-blue-400"
+										className="form-checkbox rounded accent-primary"
 									/>
 									<span>Play Sound Alert when session ends</span>
 								</label>
 							</div>
 
 							{isRunning && (
-								<div className="flex flex-col space-y-2 rounded-lg bg-gray-800/50 p-3 sm:space-y-1">
+								<div className="flex flex-col space-y-2 rounded-lg bg-muted/50 p-3 sm:space-y-1">
 									<div className="flex items-center justify-center space-x-3 sm:justify-start">
-										<span className="text-sm font-medium text-gray-300">
+										<span className="text-sm font-medium text-muted-foreground">
 											Auto-stop in:
 										</span>
-										<span className="rounded-md bg-gray-900/50 px-3 py-1 font-mono text-xl font-bold">
+										<span className="rounded-md bg-background/50 px-3 py-1 font-mono text-xl font-bold">
 											{remainingTime}
 										</span>
 									</div>
-									<span className="text-center text-sm text-red-800 sm:text-left">
+									<span className="text-center text-sm text-rose-600 dark:text-rose-400 sm:text-left">
 										{formatRemainingTimeDisplay(
 											differenceInSeconds(
 												addMinutes(startTime!, SESSION_DURATION_MINUTES),
@@ -300,10 +299,8 @@ const BleGUI: React.FC = () => {
 							)}
 
 							{/* PWM Level Control UI */}
-							<div className="mt-6 rounded-lg bg-gray-800/50 p-4">
-								<h3 className="mb-4 text-lg font-medium text-white">
-									PWM Level Control
-								</h3>
+							<div className="mt-6 rounded-lg bg-muted/50 p-4">
+								<h3 className="mb-4 text-lg font-medium">PWM Level Control</h3>
 								<Tabs defaultValue="thumb" className="w-full">
 									<TabsList className="grid w-full grid-cols-6">
 										<TabsTrigger value="thumb">Thumb</TabsTrigger>
@@ -327,14 +324,13 @@ const BleGUI: React.FC = () => {
 										<TabsContent key={key} value={key} className="space-y-4">
 											<div className="space-y-2">
 												<div className="flex items-center justify-between">
-													<Label
-														htmlFor={`${key}-pwm-level`}
-														className="text-white"
-													>
+													<Label htmlFor={`${key}-pwm-level`}>
 														{key.charAt(0).toUpperCase() + key.slice(1)} PWM
 														Level: {pwmLevels[key]}
 													</Label>
-													<span className="text-sm text-gray-400">(0-5)</span>
+													<span className="text-sm text-muted-foreground">
+														(0-5)
+													</span>
 												</div>
 												<ColoredSlider
 													id={`${key}-pwm-level`}
@@ -348,10 +344,16 @@ const BleGUI: React.FC = () => {
 													level={pwmLevels[key]}
 													className="w-full"
 												/>
-												<div className="flex justify-between text-xs text-gray-400">
-													<span className="text-green-500">Low</span>
-													<span className="text-yellow-500">Medium</span>
-													<span className="text-red-500">High</span>
+												<div className="flex justify-between text-xs text-muted-foreground">
+													<span className="text-emerald-600 dark:text-emerald-500">
+														Low
+													</span>
+													<span className="text-amber-600 dark:text-amber-500">
+														Medium
+													</span>
+													<span className="text-rose-600 dark:text-rose-500">
+														High
+													</span>
 												</div>
 											</div>
 										</TabsContent>
@@ -382,11 +384,11 @@ const BleGUI: React.FC = () => {
 						positions={linePositions}
 					/>
 				</div>
-				<span className="flex items-center justify-center text-xl text-blue-600">
+				<span className="mt-4 flex items-center justify-center text-xl text-primary">
 					Glove Compression Status
 				</span>
 				{/* To show the connection history */}
-				<div className="flex items-center justify-center text-xl text-blue-600">
+				<div className="mt-6">
 					<ConnectionHistory isConnected={isConnected} isRunning={isRunning} />
 				</div>
 			</Card>
