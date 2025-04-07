@@ -12,6 +12,9 @@ import gloveImage from "/src/assets/glove.png"
 import audio from "/src/assets/notification.mp3"
 import GlowingProgressLines from "@/components/glowing-progress-lines"
 import ConnectionHistory from "./connection-history"
+import { Slider } from "./ui/slider"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
+import { Label } from "./ui/label"
 
 const BleGUI: React.FC = () => {
 	const [receivedData, setReceivedData] = useState<
@@ -38,11 +41,13 @@ const BleGUI: React.FC = () => {
 		errorMessage,
 		isConnected,
 		isRunning,
+		pwmLevels,
 		connectToBle,
 		disconnectBle,
 		startBoard,
 		stopBoard,
 		readCharacteristic,
+		setPwmLevel,
 	} = useBluetoothConnection()
 
 	const readingQueueRef = useRef<CharacteristicKeys[]>([])
@@ -218,6 +223,16 @@ const BleGUI: React.FC = () => {
 		return result
 	}
 
+	// Handle PWM level changes
+	const handlePwmLevelChange = async (
+		key: CharacteristicKeys,
+		value: number[],
+	) => {
+		// Slider returns an array of values, but we only have one slider per control
+		const level = value[0]
+		await setPwmLevel(key, level)
+	}
+
 	return (
 		<div className="flex min-h-screen flex-col items-center p-4 sm:p-8">
 			<Card className="w-full max-w-3xl rounded-lg p-4 text-white shadow-md sm:p-6">
@@ -283,6 +298,64 @@ const BleGUI: React.FC = () => {
 									</span>
 								</div>
 							)}
+
+							{/* PWM Level Control UI */}
+							<div className="mt-6 rounded-lg bg-gray-800/50 p-4">
+								<h3 className="mb-4 text-lg font-medium text-white">
+									PWM Level Control
+								</h3>
+								<Tabs defaultValue="thumb" className="w-full">
+									<TabsList className="grid w-full grid-cols-6">
+										<TabsTrigger value="thumb">Thumb</TabsTrigger>
+										<TabsTrigger value="index">Index</TabsTrigger>
+										<TabsTrigger value="middle">Middle</TabsTrigger>
+										<TabsTrigger value="ring">Ring</TabsTrigger>
+										<TabsTrigger value="pinky">Pinky</TabsTrigger>
+										<TabsTrigger value="palm">Palm</TabsTrigger>
+									</TabsList>
+
+									{(
+										[
+											"thumb",
+											"index",
+											"middle",
+											"ring",
+											"pinky",
+											"palm",
+										] as CharacteristicKeys[]
+									).map((key) => (
+										<TabsContent key={key} value={key} className="space-y-4">
+											<div className="space-y-2">
+												<div className="flex items-center justify-between">
+													<Label
+														htmlFor={`${key}-pwm-level`}
+														className="text-white"
+													>
+														{key.charAt(0).toUpperCase() + key.slice(1)} PWM
+														Level: {pwmLevels[key]}
+													</Label>
+													<span className="text-sm text-gray-400">(0-5)</span>
+												</div>
+												<Slider
+													id={`${key}-pwm-level`}
+													min={0}
+													max={5}
+													step={1}
+													defaultValue={[pwmLevels[key]]}
+													onValueChange={(value) =>
+														handlePwmLevelChange(key, value)
+													}
+													className="w-full"
+												/>
+												<div className="flex justify-between text-xs text-gray-400">
+													<span>Min</span>
+													<span>Max</span>
+												</div>
+											</div>
+										</TabsContent>
+									))}
+								</Tabs>
+							</div>
 						</div>
 					)}
 				</div>
