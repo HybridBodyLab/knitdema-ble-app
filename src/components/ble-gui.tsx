@@ -1,5 +1,4 @@
 // src/components/ble-gui.tsx
-
 import React, { useState, useCallback, useRef, useEffect } from "react"
 import { CHARACTERISTIC_UUIDS, CharacteristicKeys } from "@/constants"
 import { useBluetoothConnection } from "@/hooks/use-bluetooth-connection"
@@ -27,6 +26,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "./ui/select"
+import { ActivationModeSelector } from "./activation-mode-selector"
 
 const BleGUI: React.FC = () => {
 	const [receivedData, setReceivedData] = useState<
@@ -57,12 +57,14 @@ const BleGUI: React.FC = () => {
 		isConnected,
 		isRunning,
 		pwmLevels,
+		activationMode,
 		connectToBle,
 		disconnectBle,
 		startBoard,
 		stopBoard,
 		readCharacteristic,
 		setPwmLevel,
+		changeActivationMode,
 	} = useBluetoothConnection()
 
 	const readingQueueRef = useRef<CharacteristicKeys[]>([])
@@ -229,8 +231,8 @@ const BleGUI: React.FC = () => {
 
 	const transformDataForGlowingLines = (
 		data: Record<CharacteristicKeys, string>,
-	): Record<string, number> => {
-		const result: Record<string, number> = {}
+	): Record<string, number[]> => {
+		const result: Record<string, number[]> = {}
 		const characteristics = [
 			"palm",
 			"thumb",
@@ -241,7 +243,16 @@ const BleGUI: React.FC = () => {
 		]
 		characteristics.forEach((char) => {
 			if (char in data) {
-				result[char] = data[char as keyof typeof data].indexOf("1")
+				const value = data[char as keyof typeof data]
+				// Find all occurrences of "1" in the string
+				const activePositions: number[] = []
+				for (let i = 0; i < value.length; i++) {
+					if (value[i] === "1") {
+						activePositions.push(i)
+					}
+				}
+				// If no active positions, use -1 to indicate none active
+				result[char] = activePositions.length > 0 ? activePositions : [-1]
 			}
 		})
 		return result
@@ -329,6 +340,13 @@ const BleGUI: React.FC = () => {
 								</label>
 							</div>
 
+							{/* Activation Mode Selector */}
+							<ActivationModeSelector
+								value={activationMode}
+								onChange={changeActivationMode}
+								disabled={isRunning}
+							/>
+
 							{isRunning && (
 								<div className="flex flex-col space-y-2 rounded-lg bg-muted/50 p-3 sm:space-y-1">
 									<div className="flex items-center justify-center space-x-3 sm:justify-start">
@@ -352,7 +370,7 @@ const BleGUI: React.FC = () => {
 
 							{/* PWM Level Control UI */}
 							<div className="mt-6 rounded-lg bg-muted/50 p-4">
-								<h3 className="mb-4 text-lg font-medium">PWM Level Control</h3>
+								<h3 className="mb-4 text-lg font-medium">Compression Level</h3>
 								<Tabs defaultValue="thumb" className="w-full">
 									<TabsList className="grid w-full grid-cols-6">
 										<TabsTrigger value="thumb">Thumb</TabsTrigger>
@@ -377,8 +395,8 @@ const BleGUI: React.FC = () => {
 											<div className="space-y-2">
 												<div className="flex items-center justify-between">
 													<Label htmlFor={`${key}-pwm-level`}>
-														{key.charAt(0).toUpperCase() + key.slice(1)} PWM
-														Level: {pwmLevels[key]}
+														{/* {key.charAt(0).toUpperCase() + key.slice(1)}{" "} */}
+														Compression Level: {pwmLevels[key]}
 													</Label>
 													<span className="text-sm text-muted-foreground">
 														(0-5)
@@ -428,7 +446,7 @@ const BleGUI: React.FC = () => {
 				>
 					<img
 						src={gloveImage}
-						alt="Knitdema Glove"
+						alt="EdemaFlex Glove"
 						className="absolute left-0 top-0 h-full w-full object-contain"
 					/>
 					<GlowingProgressLines
