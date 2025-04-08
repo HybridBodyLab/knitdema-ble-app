@@ -11,6 +11,10 @@ export const useBluetoothConnection = () => {
 	const [errorMessage, setErrorMessage] = useState<string | null>(null)
 	const [isConnected, setIsConnected] = useState(false)
 	const [isRunning, setIsRunning] = useState(false)
+	const [activationMode, setActivationMode] = useLocalStorage<number>(
+		"activation-mode",
+		0,
+	)
 	const characteristicsRef = useRef<Record<
 		CharacteristicKeys,
 		BluetoothRemoteGATTCharacteristic
@@ -37,6 +41,13 @@ export const useBluetoothConnection = () => {
 				// Small delay to ensure the board is ready
 				await new Promise((resolve) => setTimeout(resolve, 1000))
 
+				// First apply the activation mode
+				try {
+					await setActivationModeOnBoard(activationMode)
+				} catch (error) {
+					console.error("Failed to apply activation mode:", error)
+				}
+
 				for (const [key, level] of Object.entries(pwmLevels)) {
 					if (Object.keys(CHARACTERISTIC_UUIDS).includes(key)) {
 						try {
@@ -55,7 +66,46 @@ export const useBluetoothConnection = () => {
 
 			applyStoredLevels()
 		}
-	}, [isConnected, pwmLevels])
+	}, [isConnected, pwmLevels, activationMode])
+
+	// Function to set the activation mode on the board
+	const setActivationModeOnBoard = useCallback(async (mode: number) => {
+		if (!characteristicsRef.current) {
+			setErrorMessage("Not connected to the board")
+			return false
+		}
+
+		if (mode < 0 || mode > 2) {
+			setErrorMessage("Activation mode must be between 0 and 2")
+			return false
+		}
+
+		try {
+			const encoder = new TextEncoder()
+			const value = encoder.encode(mode.toString())
+			await characteristicsRef.current.led.writeValue(value)
+
+			setConnectionStatus(`Activation mode set to ${mode}`)
+			return true
+		} catch (error) {
+			setErrorMessage(
+				`Error setting activation mode: ${(error as Error).message}`,
+			)
+			return false
+		}
+	}, [])
+
+	// Function to update the activation mode
+	const changeActivationMode = useCallback(
+		async (mode: number) => {
+			if (await setActivationModeOnBoard(mode)) {
+				setActivationMode(mode)
+				return true
+			}
+			return false
+		},
+		[setActivationMode, setActivationModeOnBoard],
+	)
 
 	const connectToBle = async () => {
 		try {
@@ -232,11 +282,13 @@ export const useBluetoothConnection = () => {
 		isConnected,
 		isRunning,
 		pwmLevels,
+		activationMode,
 		connectToBle,
 		disconnectBle,
 		startBoard,
 		stopBoard,
 		readCharacteristic,
 		setPwmLevel,
+		changeActivationMode,
 	}
 }
