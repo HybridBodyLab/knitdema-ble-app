@@ -370,7 +370,7 @@ const BleGUI: React.FC = () => {
 
 							{/* PWM Level Control UI */}
 							<div className="mt-6 rounded-lg bg-muted/50 p-4">
-								<h3 className="mb-4 text-lg font-medium">PWM Level Control</h3>
+								<h3 className="mb-4 text-lg font-medium">Compression Level</h3>
 								<Tabs defaultValue="thumb" className="w-full">
 									<TabsList className="grid w-full grid-cols-6">
 										<TabsTrigger value="thumb">Thumb</TabsTrigger>
@@ -395,8 +395,8 @@ const BleGUI: React.FC = () => {
 											<div className="space-y-2">
 												<div className="flex items-center justify-between">
 													<Label htmlFor={`${key}-pwm-level`}>
-														{key.charAt(0).toUpperCase() + key.slice(1)} PWM
-														Level: {pwmLevels[key]}
+														{/* {key.charAt(0).toUpperCase() + key.slice(1)}{" "} */}
+														Compression Level: {pwmLevels[key]}
 													</Label>
 													<span className="text-sm text-muted-foreground">
 														(0-5)
@@ -446,7 +446,7 @@ const BleGUI: React.FC = () => {
 				>
 					<img
 						src={gloveImage}
-						alt="Knitdema Glove"
+						alt="EdemaFlex Glove"
 						className="absolute left-0 top-0 h-full w-full object-contain"
 					/>
 					<GlowingProgressLines
