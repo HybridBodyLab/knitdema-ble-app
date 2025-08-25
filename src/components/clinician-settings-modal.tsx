@@ -26,7 +26,7 @@ import {
 } from "./ui/select"
 import { ActivationModeSelector } from "./activation-mode-selector"
 import { SESSION_DURATION_OPTIONS } from "@/lib/constants"
-import { CharacteristicKeys } from "@/constants"
+import { CharacteristicKeys, CLINICIAN_PASSWORD } from "@/constants"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 interface ClinicianSettingsModalProps {
@@ -63,7 +63,7 @@ const ClinicianSettingsModal: React.FC<ClinicianSettingsModalProps> = ({
 	const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
 
 	const handlePasswordSubmit = () => {
-		if (password === "1111") {
+		if (password === CLINICIAN_PASSWORD) {
 			setIsAuthenticated(true)
 			setError("")
 		} else {

@@ -356,30 +356,6 @@ const BleGUI: React.FC<BleGUIProps> = ({ triggerModalOpen }) => {
 								</label>
 							</div>
 
-							{/* Show Current Compression Pattern (Read-only) */}
-							<div className="rounded-lg bg-muted/50 p-4">
-								<div className="mb-2 flex items-center justify-between">
-									<h3 className="text-lg font-medium">Compression Pattern</h3>
-									<span className="text-xs text-muted-foreground">
-										Clinician controlled
-									</span>
-								</div>
-								<div className="text-sm font-medium">
-									{activationMode === 0
-										? "Single"
-										: activationMode === 1
-											? "Dual"
-											: "Triple"}
-								</div>
-								<p className="mt-1 text-xs text-muted-foreground">
-									{activationMode === 0
-										? "Activates one SMA at a time"
-										: activationMode === 1
-											? "Activates two SMAs at a time"
-											: "Activates three SMAs at a time"}
-								</p>
-							</div>
-
 							{isRunning && (
 								<div className="flex flex-col space-y-2 rounded-lg bg-muted/50 p-3 sm:space-y-1">
 									<div className="flex items-center justify-center space-x-3 sm:justify-start">
@@ -400,35 +376,6 @@ const BleGUI: React.FC<BleGUIProps> = ({ triggerModalOpen }) => {
 									</span>
 								</div>
 							)}
-
-							{/* Show Current Compression Levels (Read-only) */}
-							<div className="mt-6 rounded-lg bg-muted/50 p-4">
-								<div className="mb-4 flex items-center justify-between">
-									<h3 className="text-lg font-medium">Compression Levels</h3>
-									<span className="text-xs text-muted-foreground">
-										Clinician controlled
-									</span>
-								</div>
-								<div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
-									{(
-										[
-											"thumb",
-											"index",
-											"middle",
-											"ring",
-											"pinky",
-											"palm",
-										] as CharacteristicKeys[]
-									).map((key) => (
-										<div key={key} className="flex justify-between">
-											<span className="capitalize text-muted-foreground">
-												{key}:
-											</span>
-											<span className="font-medium">{pwmLevels[key]}/5</span>
-										</div>
-									))}
-								</div>
-							</div>
 						</div>
 					)}
 				</div>
