@@ -1,5 +1,5 @@
 // src/components/ble-gui.tsx
-import React, { useState, useCallback, useRef, useEffect } from "react"
+import React, { useState, useCallback, useRef, useEffect, useMemo } from "react"
 import { CHARACTERISTIC_UUIDS, CharacteristicKeys } from "@/constants"
 import { useBluetoothConnection } from "@/hooks/use-bluetooth-connection"
 import { Button } from "./ui/button"
@@ -16,19 +16,14 @@ import gloveImage from "/src/assets/glove.png"
 import audio from "/src/assets/notification.mp3"
 import GlowingProgressLines from "@/components/glowing-progress-lines"
 import ConnectionHistory from "./connection-history"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import { Label } from "./ui/label"
-import { ColoredSlider } from "./ui/slider-colored"
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "./ui/select"
-import { ActivationModeSelector } from "./activation-mode-selector"
+import ClinicianSettingsModal from "./clinician-settings-modal"
 
-const BleGUI: React.FC = () => {
+interface BleGUIProps {
+	triggerModalOpen: number
+}
+
+const BleGUI: React.FC<BleGUIProps> = ({ triggerModalOpen }) => {
 	const [receivedData, setReceivedData] = useState<
 		Record<CharacteristicKeys, string>
 	>({
@@ -50,15 +45,25 @@ const BleGUI: React.FC = () => {
 	const [sessionDuration, setSessionDuration] = useState<string>(
 		getCurrentSessionDuration().toString(),
 	)
+	const [showClinicianModal, setShowClinicianModal] = useState<boolean>(false)
+
+	// Listen for external trigger to open modal
+	React.useEffect(() => {
+		if (triggerModalOpen > 0) {
+			setShowClinicianModal(true)
+		}
+	}, [triggerModalOpen])
 
 	const {
 		connectionStatus,
 		errorMessage,
 		isConnected,
 		isRunning,
+		isMockMode,
 		pwmLevels,
 		activationMode,
 		connectToBle,
+		mockConnect,
 		disconnectBle,
 		startBoard,
 		stopBoard,
@@ -70,7 +75,7 @@ const BleGUI: React.FC = () => {
 	const readingQueueRef = useRef<CharacteristicKeys[]>([])
 	const isProcessingRef = useRef(false)
 	const intervalIdRef = useRef<number | null>(null)
-	const notificationSound = new Audio(audio)
+	const notificationSound = useMemo(() => new Audio(audio), [])
 
 	const formatRemainingTime = (seconds: number): string => {
 		if (seconds <= 0) return "00:00"
@@ -158,6 +163,26 @@ const BleGUI: React.FC = () => {
 		return () => window.clearInterval(intervalId)
 	}, [isRunning, startTime])
 
+	// disconnect from the board and set the start time to null
+	const handleDisconnect = useCallback(async () => {
+		const finalReadings = await disconnectBle()
+		if (finalReadings) {
+			setReceivedData((prev) => ({ ...prev, ...finalReadings }))
+		}
+		setStartTime(null)
+	}, [disconnectBle])
+
+	const createSessionEndAlert = useCallback(async () => {
+		if (playAlert) {
+			await new Promise((resolve) => {
+				notificationSound.play()
+				notificationSound.onended = resolve
+			})
+		}
+		window.alert(`Your session has ended!`)
+		window.location.reload()
+	}, [playAlert, notificationSound])
+
 	// when a new start time is set, set a timeout to disconnect and create an alert
 	// run one time at the start of the session
 	useEffect(() => {
@@ -174,7 +199,7 @@ const BleGUI: React.FC = () => {
 		const intervalId = setInterval(checkStopTime, 5000) // Check every 5 seconds
 
 		return () => clearInterval(intervalId)
-	}, [isRunning, startTime, playAlert])
+	}, [isRunning, startTime, playAlert, handleDisconnect, createSessionEndAlert])
 
 	// read the characteristics (which SMA firing, etc.) every 100ms
 	useEffect(() => {
@@ -196,15 +221,6 @@ const BleGUI: React.FC = () => {
 		}
 	}, [isRunning, readCharacteristics])
 
-	// disconnect from the board and set the start time to null
-	const handleDisconnect = async () => {
-		const finalReadings = await disconnectBle()
-		if (finalReadings) {
-			setReceivedData((prev) => ({ ...prev, ...finalReadings }))
-		}
-		setStartTime(null)
-	}
-
 	const handleStartBoard = async () => {
 		await startBoard()
 		setStartTime(new Date())
@@ -216,17 +232,6 @@ const BleGUI: React.FC = () => {
 			setReceivedData((prev) => ({ ...prev, ...finalReadings }))
 		}
 		setStartTime(null)
-	}
-
-	const createSessionEndAlert = async () => {
-		if (playAlert) {
-			await new Promise((resolve) => {
-				notificationSound.play()
-				notificationSound.onended = resolve
-			})
-		}
-		window.alert(`Your session has ended!`)
-		window.location.reload()
 	}
 
 	const transformDataForGlowingLines = (
@@ -265,21 +270,48 @@ const BleGUI: React.FC = () => {
 	) => {
 		// Slider returns an array of values, but we only have one slider per control
 		const level = value[0]
-		await setPwmLevel(key, level)
+		console.log(`Changing PWM level for ${key} to ${level}`)
+		const result = await setPwmLevel(key, level)
+		console.log(`PWM level change result:`, result)
 	}
 
 	return (
 		<div className="flex min-h-screen flex-col items-center p-4 sm:p-8">
 			<Card className="w-full max-w-3xl rounded-lg p-4 shadow-md sm:p-6">
 				<div className="flex flex-col space-y-4">
-					<div className="w-full">
-						<Button
-							onClick={isConnected ? handleDisconnect : connectToBle}
-							variant={isConnected ? "destructive" : "default"}
-							className="w-full sm:w-auto"
-						>
-							{isConnected ? "Disconnect" : "Connect"}
-						</Button>
+					{/* Connection buttons and version info */}
+					<div className="flex flex-col space-y-3">
+						{!isConnected ? (
+							<div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
+								<Button
+									onClick={connectToBle}
+									variant="default"
+									className="w-full sm:w-auto"
+								>
+									Connect
+								</Button>
+								<Button
+									onClick={mockConnect}
+									variant="outline"
+									className="w-full border-dashed border-primary text-primary hover:bg-primary/10 sm:w-auto"
+								>
+									Mock Connect
+								</Button>
+							</div>
+						) : (
+							<div className="flex items-center justify-between">
+								<Button
+									onClick={handleDisconnect}
+									variant="destructive"
+									className="w-full sm:w-auto"
+								>
+									{isMockMode ? "Disconnect (Mock)" : "Disconnect"}
+								</Button>
+								<div className="text-sm text-muted-foreground">
+									{isMockMode ? "Mock Mode" : "Hardware"} • v1.0.0
+								</div>
+							</div>
+						)}
 					</div>
 
 					{isConnected && (
@@ -305,28 +337,14 @@ const BleGUI: React.FC = () => {
 
 							<div className="flex flex-col space-y-4 rounded-lg bg-muted/50 p-3">
 								<div className="flex items-center space-x-2">
-									<Label
-										htmlFor="session-duration"
-										className="whitespace-nowrap text-sm font-medium text-muted-foreground"
-									>
+									<Label className="whitespace-nowrap text-sm font-medium text-muted-foreground">
 										Session Duration:
 									</Label>
-									<Select
-										value={sessionDuration}
-										onValueChange={handleSessionDurationChange}
-										disabled={isRunning}
-									>
-										<SelectTrigger id="session-duration" className="w-full">
-											<SelectValue placeholder="Select duration" />
-										</SelectTrigger>
-										<SelectContent>
-											{SESSION_DURATION_OPTIONS.map((option) => (
-												<SelectItem key={option.value} value={option.value}>
-													{option.label}
-												</SelectItem>
-											))}
-										</SelectContent>
-									</Select>
+									<span className="text-sm font-medium">
+										{SESSION_DURATION_OPTIONS.find(
+											(opt) => opt.value === sessionDuration,
+										)?.label || sessionDuration + " minutes"}
+									</span>
 								</div>
 
 								<label className="flex items-center space-x-2 text-foreground">
@@ -334,18 +352,35 @@ const BleGUI: React.FC = () => {
 										type="checkbox"
 										checked={playAlert}
 										onChange={(e) => setPlayAlert(e.target.checked)}
-										className="form-checkbox rounded accent-primary"
+										className="rounded accent-primary"
 									/>
 									<span>Play Sound Alert when session ends</span>
 								</label>
 							</div>
 
-							{/* Activation Mode Selector */}
-							<ActivationModeSelector
-								value={activationMode}
-								onChange={changeActivationMode}
-								disabled={isRunning}
-							/>
+							{/* Show Current Compression Pattern (Read-only) */}
+							<div className="rounded-lg bg-muted/50 p-4">
+								<div className="mb-2 flex items-center justify-between">
+									<h3 className="text-lg font-medium">Compression Pattern</h3>
+									<span className="text-xs text-muted-foreground">
+										Clinician controlled
+									</span>
+								</div>
+								<div className="text-sm font-medium">
+									{activationMode === 0
+										? "Single"
+										: activationMode === 1
+											? "Dual"
+											: "Triple"}
+								</div>
+								<p className="mt-1 text-xs text-muted-foreground">
+									{activationMode === 0
+										? "Activates one SMA at a time"
+										: activationMode === 1
+											? "Activates two SMAs at a time"
+											: "Activates three SMAs at a time"}
+								</p>
+							</div>
 
 							{isRunning && (
 								<div className="flex flex-col space-y-2 rounded-lg bg-muted/50 p-3 sm:space-y-1">
@@ -368,19 +403,15 @@ const BleGUI: React.FC = () => {
 								</div>
 							)}
 
-							{/* PWM Level Control UI */}
+							{/* Show Current Compression Levels (Read-only) */}
 							<div className="mt-6 rounded-lg bg-muted/50 p-4">
-								<h3 className="mb-4 text-lg font-medium">Compression Level</h3>
-								<Tabs defaultValue="thumb" className="w-full">
-									<TabsList className="grid w-full grid-cols-6">
-										<TabsTrigger value="thumb">Thumb</TabsTrigger>
-										<TabsTrigger value="index">Index</TabsTrigger>
-										<TabsTrigger value="middle">Middle</TabsTrigger>
-										<TabsTrigger value="ring">Ring</TabsTrigger>
-										<TabsTrigger value="pinky">Pinky</TabsTrigger>
-										<TabsTrigger value="palm">Palm</TabsTrigger>
-									</TabsList>
-
+								<div className="mb-4 flex items-center justify-between">
+									<h3 className="text-lg font-medium">Compression Levels</h3>
+									<span className="text-xs text-muted-foreground">
+										Clinician controlled
+									</span>
+								</div>
+								<div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
 									{(
 										[
 											"thumb",
@@ -391,44 +422,14 @@ const BleGUI: React.FC = () => {
 											"palm",
 										] as CharacteristicKeys[]
 									).map((key) => (
-										<TabsContent key={key} value={key} className="space-y-4">
-											<div className="space-y-2">
-												<div className="flex items-center justify-between">
-													<Label htmlFor={`${key}-pwm-level`}>
-														{/* {key.charAt(0).toUpperCase() + key.slice(1)}{" "} */}
-														Compression Level: {pwmLevels[key]}
-													</Label>
-													<span className="text-sm text-muted-foreground">
-														(0-5)
-													</span>
-												</div>
-												<ColoredSlider
-													id={`${key}-pwm-level`}
-													min={0}
-													max={5}
-													step={1}
-													value={[pwmLevels[key]]}
-													onValueChange={(value) =>
-														handlePwmLevelChange(key, value)
-													}
-													level={pwmLevels[key]}
-													className="w-full"
-												/>
-												<div className="flex justify-between text-xs text-muted-foreground">
-													<span className="text-emerald-600 dark:text-emerald-500">
-														Low
-													</span>
-													<span className="text-amber-600 dark:text-amber-500">
-														Medium
-													</span>
-													<span className="text-rose-600 dark:text-rose-500">
-														High
-													</span>
-												</div>
-											</div>
-										</TabsContent>
+										<div key={key} className="flex justify-between">
+											<span className="capitalize text-muted-foreground">
+												{key}:
+											</span>
+											<span className="font-medium">{pwmLevels[key]}/5</span>
+										</div>
 									))}
-								</Tabs>
+								</div>
 							</div>
 						</div>
 					)}
@@ -438,6 +439,7 @@ const BleGUI: React.FC = () => {
 						connectionStatus={connectionStatus}
 						isRunning={isRunning}
 						errorMessage={errorMessage}
+						isMockMode={isMockMode}
 					/>
 				</div>
 				<div
@@ -447,7 +449,7 @@ const BleGUI: React.FC = () => {
 					<img
 						src={gloveImage}
 						alt="EdemaFlex Glove"
-						className="absolute left-0 top-0 h-full w-full object-contain"
+						className="absolute left-0 top-0 size-full object-contain"
 					/>
 					<GlowingProgressLines
 						characteristics={transformDataForGlowingLines(receivedData)}
@@ -462,6 +464,20 @@ const BleGUI: React.FC = () => {
 					<ConnectionHistory isConnected={isConnected} isRunning={isRunning} />
 				</div>
 			</Card>
+
+			{/* Clinician Settings Modal */}
+			<ClinicianSettingsModal
+				isOpen={showClinicianModal}
+				onClose={() => setShowClinicianModal(false)}
+				isConnected={isConnected}
+				sessionDuration={sessionDuration}
+				onSessionDurationChange={handleSessionDurationChange}
+				isRunning={isRunning}
+				activationMode={activationMode}
+				onActivationModeChange={changeActivationMode}
+				pwmLevels={pwmLevels}
+				onPwmLevelChange={handlePwmLevelChange}
+			/>
 		</div>
 	)
 }

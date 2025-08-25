@@ -6,19 +6,28 @@ interface StatusPanelProps {
 	connectionStatus: string
 	isRunning: boolean
 	errorMessage: string | null
+	isMockMode?: boolean
 }
 
 const StatusPanel: React.FC<StatusPanelProps> = ({
 	connectionStatus,
 	isRunning,
 	errorMessage,
+	isMockMode = false,
 }) => (
 	<Card className="mb-4 p-3 text-sm">
 		<div className="flex items-center justify-between">
-			<span>
-				Status:{" "}
-				<span className="font-medium text-primary">{connectionStatus}</span>
-			</span>
+			<div className="flex items-center space-x-2">
+				<span>
+					Status:{" "}
+					<span className="font-medium text-primary">{connectionStatus}</span>
+				</span>
+				{isMockMode && (
+					<span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+						MOCK
+					</span>
+				)}
+			</div>
 			<span className="flex items-center">
 				{isRunning ? (
 					<CheckCircle className="mr-1 size-4 text-emerald-600 dark:text-emerald-500" />
@@ -30,7 +39,7 @@ const StatusPanel: React.FC<StatusPanelProps> = ({
 		</div>
 		{errorMessage && (
 			<div className="mt-2 flex items-center text-destructive">
-				<AlertTriangle className="mr-1 h-4 w-4" />
+				<AlertTriangle className="mr-1 size-4" />
 				<span>{errorMessage}</span>
 			</div>
 		)}
