@@ -270,9 +270,7 @@ const BleGUI: React.FC<BleGUIProps> = ({ triggerModalOpen }) => {
 	) => {
 		// Slider returns an array of values, but we only have one slider per control
 		const level = value[0]
-		console.log(`Changing PWM level for ${key} to ${level}`)
-		const result = await setPwmLevel(key, level)
-		console.log(`PWM level change result:`, result)
+		await setPwmLevel(key, level)
 	}
 
 	return (

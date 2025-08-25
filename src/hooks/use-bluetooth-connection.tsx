@@ -164,15 +164,11 @@ export const useBluetoothConnection = () => {
 	// Function to update the activation mode
 	const changeActivationMode = useCallback(
 		async (mode: number) => {
-			console.log(`Changing activation mode to ${mode}`)
-
 			// ALWAYS update localStorage first (app configuration)
-			console.log(`Updating localStorage activation mode to ${mode}`)
 			setActivationMode(mode)
 
 			// Then try to send to hardware if connected
-			const result = await setActivationModeOnBoard(mode)
-			console.log(`setActivationModeOnBoard result:`, result)
+			await setActivationModeOnBoard(mode)
 
 			// Always return true because localStorage was updated successfully
 			return true
@@ -377,16 +373,12 @@ export const useBluetoothConnection = () => {
 	// Add setPwmLevel function
 	const setPwmLevel = useCallback(
 		async (key: CharacteristicKeys, level: number) => {
-			console.log(`setPwmLevel called with key: ${key}, level: ${level}`)
-
 			if (level < 0 || level > 5) {
-				console.log(`Invalid level: ${level}`)
 				setErrorMessage("PWM level must be between 0 and 5")
 				return false
 			}
 
 			// ALWAYS update localStorage first (app configuration)
-			console.log(`Updating localStorage for ${key} to ${level}`)
 			setPwmLevels((prev) => ({
 				...prev,
 				[key]: level,
@@ -394,18 +386,13 @@ export const useBluetoothConnection = () => {
 
 			// Then try to send to hardware if connected
 			if (isMockMode) {
-				console.log(`Mock mode: PWM level configured`)
 				setConnectionStatus(
 					`Mock: ${key.charAt(0).toUpperCase() + key.slice(1)} PWM level set to ${level}`,
 				)
-				console.log(`Mock PWM level update successful`)
 				return true
 			}
 
 			if (!characteristicsRef.current || !isConnected) {
-				console.log(
-					`Not connected to board - settings saved for when board connects`,
-				)
 				setConnectionStatus(
 					`${key.charAt(0).toUpperCase() + key.slice(1)} PWM level configured (will apply when board connects)`,
 				)
@@ -413,7 +400,6 @@ export const useBluetoothConnection = () => {
 			}
 
 			try {
-				console.log(`Sending PWM level to connected hardware`)
 				const encoder = new TextEncoder()
 				const value = encoder.encode(level.toString())
 				await characteristicsRef.current[key].writeValue(value)
@@ -421,10 +407,8 @@ export const useBluetoothConnection = () => {
 				setConnectionStatus(
 					`${key.charAt(0).toUpperCase() + key.slice(1)} PWM level set to ${level}`,
 				)
-				console.log(`Hardware PWM level update successful`)
 				return true
 			} catch (error) {
-				console.log(`Hardware write failed, but localStorage succeeded:`, error)
 				setErrorMessage(
 					`Hardware update failed, but setting saved: ${(error as Error).message}`,
 				)

@@ -137,12 +137,6 @@ const ClinicianSettingsModal: React.FC<ClinicianSettingsModalProps> = ({
 							<AlertDialogTitle>Clinician Settings</AlertDialogTitle>
 							<AlertDialogDescription>
 								Configure therapy parameters for the patient
-								{!isConnected && (
-									<span className="mt-1 block text-amber-600 dark:text-amber-400">
-										⚠️ Not connected - settings will be applied when board
-										connects
-									</span>
-								)}
 							</AlertDialogDescription>
 						</AlertDialogHeader>
 						<div className="space-y-6">
