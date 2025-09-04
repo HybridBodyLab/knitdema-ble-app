@@ -12,3 +12,6 @@ export const CHARACTERISTIC_UUIDS = {
 }
 
 export type CharacteristicKeys = keyof typeof CHARACTERISTIC_UUIDS
+
+// Clinician authentication
+export const CLINICIAN_PASSWORD = "1234"

@@ -50,7 +50,7 @@ export const ActivationModeSelector: React.FC<ActivationModeSelectorProps> = ({
 				<TooltipProvider>
 					<Tooltip>
 						<TooltipTrigger asChild>
-							<InfoIcon className="h-4 w-4 cursor-help text-muted-foreground" />
+							<InfoIcon className="size-4 cursor-help text-muted-foreground" />
 						</TooltipTrigger>
 						<TooltipContent side="right" className="max-w-xs">
 							Controls how many SMAs are activated simultaneously

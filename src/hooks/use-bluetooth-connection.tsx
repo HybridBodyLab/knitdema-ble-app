@@ -11,6 +11,7 @@ export const useBluetoothConnection = () => {
 	const [errorMessage, setErrorMessage] = useState<string | null>(null)
 	const [isConnected, setIsConnected] = useState(false)
 	const [isRunning, setIsRunning] = useState(false)
+	const [isMockMode, setIsMockMode] = useState(false)
 	const [activationMode, setActivationMode] = useLocalStorage<number>(
 		"activation-mode",
 		0,
@@ -20,6 +21,17 @@ export const useBluetoothConnection = () => {
 		BluetoothRemoteGATTCharacteristic
 	> | null>(null)
 	const deviceRef = useRef<BluetoothDevice | null>(null)
+	const mockDataRef = useRef<Record<CharacteristicKeys, string>>({
+		led: "0",
+		start: "0",
+		thumb: "000000",
+		index: "000000",
+		middle: "000000",
+		ring: "000000",
+		pinky: "000000",
+		palm: "0000000",
+	})
+	const mockSimulationRef = useRef<NodeJS.Timeout | null>(null)
 
 	// Add active PWM levels state with localStorage and default to level 3
 	const [pwmLevels, setPwmLevels] = useLocalStorage<Record<string, number>>(
@@ -68,41 +80,98 @@ export const useBluetoothConnection = () => {
 		}
 	}, [isConnected, pwmLevels, activationMode])
 
-	// Function to set the activation mode on the board
-	const setActivationModeOnBoard = useCallback(async (mode: number) => {
-		if (!characteristicsRef.current) {
-			setErrorMessage("Not connected to the board")
-			return false
-		}
+	// Mock simulation functions
+	const startMockSimulation = useCallback(() => {
+		let step = 0
+		const fingerSequence = ["thumb", "index", "middle", "ring", "pinky"]
 
-		if (mode < 0 || mode > 2) {
-			setErrorMessage("Activation mode must be between 0 and 2")
-			return false
-		}
+		mockSimulationRef.current = setInterval(() => {
+			// Reset all to inactive
+			mockDataRef.current.thumb = "000000"
+			mockDataRef.current.index = "000000"
+			mockDataRef.current.middle = "000000"
+			mockDataRef.current.ring = "000000"
+			mockDataRef.current.pinky = "000000"
+			mockDataRef.current.palm = "0000000"
 
-		try {
-			const encoder = new TextEncoder()
-			const value = encoder.encode(mode.toString())
-			await characteristicsRef.current.led.writeValue(value)
+			if (step < 6) {
+				// Finger phases (6 steps for each finger)
+				const fingerState = "000000".split("")
+				fingerState[step] = "1"
+				const activeFingerState = fingerState.join("")
 
-			setConnectionStatus(`Activation mode set to ${mode}`)
-			return true
-		} catch (error) {
-			setErrorMessage(
-				`Error setting activation mode: ${(error as Error).message}`,
-			)
-			return false
+				// Activate all fingers for the current step
+				fingerSequence.forEach((finger) => {
+					mockDataRef.current[finger as CharacteristicKeys] = activeFingerState
+				})
+			} else if (step < 13) {
+				// Palm phases (7 steps)
+				const palmIndex = step - 6
+				const palmState = "0000000".split("")
+				palmState[palmIndex] = "1"
+				mockDataRef.current.palm = palmState.join("")
+			}
+
+			step = (step + 1) % 13 // Reset after 13 steps to cycle continuously
+		}, 3000) // 3 seconds per step (reduced from 5 seconds for demo purposes)
+	}, [])
+
+	const stopMockSimulation = useCallback(() => {
+		if (mockSimulationRef.current) {
+			clearInterval(mockSimulationRef.current)
+			mockSimulationRef.current = null
 		}
 	}, [])
+
+	// Function to set the activation mode on the board
+	const setActivationModeOnBoard = useCallback(
+		async (mode: number) => {
+			if (mode < 0 || mode > 2) {
+				setErrorMessage("Activation mode must be between 0 and 2")
+				return false
+			}
+
+			if (isMockMode) {
+				mockDataRef.current.led = mode.toString()
+				setConnectionStatus(`Mock: Activation mode set to ${mode}`)
+				return true
+			}
+
+			if (!characteristicsRef.current || !isConnected) {
+				setConnectionStatus(
+					`Activation mode configured (will apply when board connects)`,
+				)
+				return true // Return true to indicate localStorage update succeeded
+			}
+
+			try {
+				const encoder = new TextEncoder()
+				const value = encoder.encode(mode.toString())
+				await characteristicsRef.current.led.writeValue(value)
+
+				setConnectionStatus(`Activation mode set to ${mode}`)
+				return true
+			} catch (error) {
+				setErrorMessage(
+					`Hardware update failed, but setting saved: ${(error as Error).message}`,
+				)
+				return true // Return true because localStorage was already updated
+			}
+		},
+		[isMockMode, isConnected],
+	)
 
 	// Function to update the activation mode
 	const changeActivationMode = useCallback(
 		async (mode: number) => {
-			if (await setActivationModeOnBoard(mode)) {
-				setActivationMode(mode)
-				return true
-			}
-			return false
+			// ALWAYS update localStorage first (app configuration)
+			setActivationMode(mode)
+
+			// Then try to send to hardware if connected
+			await setActivationModeOnBoard(mode)
+
+			// Always return true because localStorage was updated successfully
+			return true
 		},
 		[setActivationMode, setActivationModeOnBoard],
 	)
@@ -142,6 +211,7 @@ export const useBluetoothConnection = () => {
 			characteristicsRef.current = characteristics
 
 			setIsConnected(true)
+			setIsMockMode(false)
 			setErrorMessage(null)
 			setConnectionStatus("Connected. Click 'Start' to begin.")
 		} catch (error) {
@@ -150,22 +220,76 @@ export const useBluetoothConnection = () => {
 		}
 	}
 
-	const readCharacteristic = async (key: CharacteristicKeys) => {
-		if (!characteristicsRef.current) {
-			return null
-		}
-		const characteristic = characteristicsRef.current[key]
+	const mockConnect = async () => {
 		try {
-			const value = await characteristic.readValue()
-			const decoder = new TextDecoder("utf-8")
-			return decoder.decode(value)
+			setConnectionStatus("Initializing Mock Connection...")
+			await new Promise((resolve) => setTimeout(resolve, 500))
+
+			setConnectionStatus("Mock: Getting Service...")
+			await new Promise((resolve) => setTimeout(resolve, 300))
+
+			setConnectionStatus("Mock: Getting Characteristics...")
+			await new Promise((resolve) => setTimeout(resolve, 300))
+
+			// Reset mock data to initial state
+			mockDataRef.current = {
+				led: activationMode.toString(),
+				start: "0",
+				thumb: "000000",
+				index: "000000",
+				middle: "000000",
+				ring: "000000",
+				pinky: "000000",
+				palm: "0000000",
+			}
+
+			setIsConnected(true)
+			setIsMockMode(true)
+			setErrorMessage(null)
+			setConnectionStatus("Mock Connected. Click 'Start' to begin.")
 		} catch (error) {
-			setErrorMessage(`Error reading ${key}: ${(error as Error).message}`)
-			return null
+			setErrorMessage(`Mock Error - ${(error as Error).message}`)
+			setConnectionStatus("Mock connection failed")
 		}
 	}
 
+	const readCharacteristic = useCallback(
+		async (key: CharacteristicKeys) => {
+			if (isMockMode) {
+				// Return mock data with small delay to simulate real BLE
+				await new Promise((resolve) => setTimeout(resolve, 10))
+				return mockDataRef.current[key]
+			}
+
+			if (!characteristicsRef.current) {
+				return null
+			}
+			const characteristic = characteristicsRef.current[key]
+			try {
+				const value = await characteristic.readValue()
+				const decoder = new TextDecoder("utf-8")
+				return decoder.decode(value)
+			} catch (error) {
+				setErrorMessage(`Error reading ${key}: ${(error as Error).message}`)
+				return null
+			}
+		},
+		[isMockMode],
+	)
+
 	const readAllCharacteristics = useCallback(async () => {
+		if (isMockMode) {
+			const results: Partial<Record<CharacteristicKeys, string>> = {}
+			for (const key of Object.keys(
+				CHARACTERISTIC_UUIDS,
+			) as CharacteristicKeys[]) {
+				if (key !== "led" && key !== "start") {
+					results[key] = mockDataRef.current[key]
+				}
+			}
+			return results
+		}
+
 		if (!characteristicsRef.current) {
 			setErrorMessage("Not connected to the board")
 			return null
@@ -182,9 +306,18 @@ export const useBluetoothConnection = () => {
 			}
 		}
 		return results
-	}, [])
+	}, [isMockMode, readCharacteristic])
 
 	const startBoard = useCallback(async () => {
+		if (isMockMode) {
+			mockDataRef.current.start = "1"
+			setIsRunning(true)
+			setConnectionStatus("Mock Board started")
+			// Start mock simulation
+			startMockSimulation()
+			return
+		}
+
 		if (!characteristicsRef.current) {
 			setErrorMessage("Not connected to the board")
 			return
@@ -198,9 +331,26 @@ export const useBluetoothConnection = () => {
 		} catch (error) {
 			setErrorMessage(`Error starting board - ${(error as Error).message}`)
 		}
-	}, [])
+	}, [isMockMode, startMockSimulation])
 
 	const stopBoard = useCallback(async () => {
+		if (isMockMode) {
+			mockDataRef.current.start = "0"
+			// Reset all mock data to inactive state
+			mockDataRef.current.thumb = "000000"
+			mockDataRef.current.index = "000000"
+			mockDataRef.current.middle = "000000"
+			mockDataRef.current.ring = "000000"
+			mockDataRef.current.pinky = "000000"
+			mockDataRef.current.palm = "0000000"
+
+			setIsRunning(false)
+			setConnectionStatus("Mock Board stopped")
+			stopMockSimulation()
+
+			return await readAllCharacteristics()
+		}
+
 		if (!characteristicsRef.current) {
 			setErrorMessage("Not connected to the board")
 			return null
@@ -218,19 +368,35 @@ export const useBluetoothConnection = () => {
 			setErrorMessage(`Error stopping board - ${(error as Error).message}`)
 			return null
 		}
-	}, [readAllCharacteristics])
+	}, [readAllCharacteristics, isMockMode, stopMockSimulation])
 
 	// Add setPwmLevel function
 	const setPwmLevel = useCallback(
 		async (key: CharacteristicKeys, level: number) => {
-			if (!characteristicsRef.current) {
-				setErrorMessage("Not connected to the board")
-				return false
-			}
-
 			if (level < 0 || level > 5) {
 				setErrorMessage("PWM level must be between 0 and 5")
 				return false
+			}
+
+			// ALWAYS update localStorage first (app configuration)
+			setPwmLevels((prev) => ({
+				...prev,
+				[key]: level,
+			}))
+
+			// Then try to send to hardware if connected
+			if (isMockMode) {
+				setConnectionStatus(
+					`Mock: ${key.charAt(0).toUpperCase() + key.slice(1)} PWM level set to ${level}`,
+				)
+				return true
+			}
+
+			if (!characteristicsRef.current || !isConnected) {
+				setConnectionStatus(
+					`${key.charAt(0).toUpperCase() + key.slice(1)} PWM level configured (will apply when board connects)`,
+				)
+				return true // Success because localStorage was updated
 			}
 
 			try {
@@ -238,22 +404,18 @@ export const useBluetoothConnection = () => {
 				const value = encoder.encode(level.toString())
 				await characteristicsRef.current[key].writeValue(value)
 
-				// Update the PWM level state
-				setPwmLevels((prev) => ({
-					...prev,
-					[key]: level,
-				}))
-
 				setConnectionStatus(
 					`${key.charAt(0).toUpperCase() + key.slice(1)} PWM level set to ${level}`,
 				)
 				return true
 			} catch (error) {
-				setErrorMessage(`Error setting PWM level: ${(error as Error).message}`)
-				return false
+				setErrorMessage(
+					`Hardware update failed, but setting saved: ${(error as Error).message}`,
+				)
+				return true // Still success because localStorage was updated
 			}
 		},
-		[setPwmLevels],
+		[setPwmLevels, isMockMode, isConnected],
 	)
 
 	const disconnectBle = async () => {
@@ -262,6 +424,17 @@ export const useBluetoothConnection = () => {
 			finalReadings = await stopBoard()
 		} else if (isConnected) {
 			finalReadings = await readAllCharacteristics()
+		}
+
+		// Clean up mock simulation if running
+		stopMockSimulation()
+
+		if (isMockMode) {
+			setIsConnected(false)
+			setIsMockMode(false)
+			setIsRunning(false)
+			setConnectionStatus("Mock Disconnected")
+			return finalReadings
 		}
 
 		if (deviceRef.current && deviceRef.current.gatt?.connected) {
@@ -281,9 +454,11 @@ export const useBluetoothConnection = () => {
 		errorMessage,
 		isConnected,
 		isRunning,
+		isMockMode,
 		pwmLevels,
 		activationMode,
 		connectToBle,
+		mockConnect,
 		disconnectBle,
 		startBoard,
 		stopBoard,

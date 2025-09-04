@@ -21,6 +21,7 @@ import { formatInTimeZone } from "date-fns-tz"
 import { Card, CardContent, CardHeader } from "./ui/card"
 import { Separator } from "@/components/ui/separator"
 import * as XLSX from "xlsx"
+import { CLINICIAN_PASSWORD } from "@/constants"
 
 interface ConnectionRecord {
 	id: number
@@ -201,7 +202,7 @@ const ConnectionHistory: React.FC<ConnectionHistoryProps> = ({
 	}
 
 	const confirmAction = (): void => {
-		if (password === "1234") {
+		if (password === CLINICIAN_PASSWORD) {
 			if (action === "clear") {
 				removeConnections()
 			} else if (action === "delete" && selectedId !== null) {
