@@ -187,6 +187,14 @@ const BleGUI: React.FC<BleGUIProps> = ({ triggerModalOpen }) => {
 		window.location.reload()
 	}, [playAlert, notificationSound])
 
+	// Use refs to store the latest function versions
+	const handleDisconnectRef = useRef(handleDisconnect)
+	const createSessionEndAlertRef = useRef(createSessionEndAlert)
+
+	// Update refs immediately when functions change
+	handleDisconnectRef.current = handleDisconnect
+	createSessionEndAlertRef.current = createSessionEndAlert
+
 	// when a new start time is set, set a timeout to disconnect and create an alert
 	// run one time at the start of the session
 	useEffect(() => {
@@ -195,16 +203,16 @@ const BleGUI: React.FC<BleGUIProps> = ({ triggerModalOpen }) => {
 		const checkStopTime = () => {
 			const stopTime = addMinutes(startTime, getCurrentSessionDuration())
 			if (new Date() >= stopTime) {
-				handleDisconnect()
-				createSessionEndAlert()
+				console.log("disconnecting")
+				handleDisconnectRef.current()
+				createSessionEndAlertRef.current()
 			}
 		}
 
-		checkStopTime()
 		const intervalId = setInterval(checkStopTime, 5000)
 
 		return () => clearInterval(intervalId)
-	}, [isRunning, startTime, playAlert, handleDisconnect, createSessionEndAlert])
+	}, [isRunning, startTime])
 
 	// read the characteristics (which SMA firing, etc.) every 100ms
 	useEffect(() => {
