@@ -133,16 +133,16 @@ const BleGUI: React.FC<BleGUIProps> = ({ triggerModalOpen }) => {
 		processQueue()
 	}, [isRunning, readCharacteristic])
 
-	// Handle session duration change from settings or quick test buttons
+	// Handle session duration change
 	const handleSessionDurationChange = (value: string) => {
 		setSessionDuration(value)
-		// Update the global session duration setting
+		// Update the session duration
 		setCurrentSessionDuration(parseInt(value))
-		// Update the remaining time display to reflect new duration
+		// Update the remaining time display
 		setRemainingTime(formatRemainingTime(parseInt(value) * 60))
 	}
 
-	// Timer countdown display - updates every second to show remaining time
+	//set calculate stop time
 	useEffect(() => {
 		if (!isRunning || !startTime) {
 			// Reset to full session duration when not running
@@ -152,6 +152,8 @@ const BleGUI: React.FC<BleGUIProps> = ({ triggerModalOpen }) => {
 
 		// Calculate when the session should end
 		const stopTime = addMinutes(startTime, getCurrentSessionDuration())
+		console.log("Session started at:", startTime)
+		console.log("Expected stop time:", stopTime)
 
 		// Update countdown display every second
 		const updateCountdown = () => {
@@ -209,6 +211,7 @@ const BleGUI: React.FC<BleGUIProps> = ({ triggerModalOpen }) => {
 			}
 		}
 
+		checkStopTime()
 		const intervalId = setInterval(checkStopTime, 5000)
 
 		return () => clearInterval(intervalId)
@@ -356,33 +359,6 @@ const BleGUI: React.FC<BleGUIProps> = ({ triggerModalOpen }) => {
 											(opt) => opt.value === sessionDuration,
 										)?.label || sessionDuration + " minutes"}
 									</span>
-								</div>
-
-								{/* Quick bypass for testing */}
-								<div className="flex flex-col space-y-2">
-									<Label className="text-sm font-medium text-muted-foreground">
-										Quick Test Duration:
-									</Label>
-									<div className="flex flex-wrap gap-2">
-										<Button
-											variant={sessionDuration === "1" ? "default" : "outline"}
-											size="sm"
-											onClick={() => handleSessionDurationChange("1")}
-											disabled={isRunning}
-											className="text-xs"
-										>
-											1 minute (Test)
-										</Button>
-										<Button
-											variant={sessionDuration === "30" ? "default" : "outline"}
-											size="sm"
-											onClick={() => handleSessionDurationChange("30")}
-											disabled={isRunning}
-											className="text-xs"
-										>
-											30 minutes
-										</Button>
-									</div>
 								</div>
 
 								<label className="flex items-center space-x-2 text-foreground">

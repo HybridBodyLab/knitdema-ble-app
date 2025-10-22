@@ -11,7 +11,6 @@ export const setCurrentSessionDuration = (duration: number) => {
 }
 
 export const SESSION_DURATION_OPTIONS = [
-	{ value: "1", label: "1 minute (Test)" },
 	{ value: "30", label: "30 minutes" },
 	{ value: "45", label: "45 minutes" },
 	{ value: "60", label: "1 hour" },
