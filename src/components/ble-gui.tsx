@@ -133,33 +133,37 @@ const BleGUI: React.FC<BleGUIProps> = ({ triggerModalOpen }) => {
 		processQueue()
 	}, [isRunning, readCharacteristic])
 
-	// Handle session duration change
+	// Handle session duration change from settings or quick test buttons
 	const handleSessionDurationChange = (value: string) => {
 		setSessionDuration(value)
-		// Update the session duration
+		// Update the global session duration setting
 		setCurrentSessionDuration(parseInt(value))
-		// Update the remaining time display
+		// Update the remaining time display to reflect new duration
 		setRemainingTime(formatRemainingTime(parseInt(value) * 60))
 	}
 
-	//set calculate stop time
+	// Timer countdown display - updates every second to show remaining time
 	useEffect(() => {
 		if (!isRunning || !startTime) {
+			// Reset to full session duration when not running
 			setRemainingTime(formatRemainingTime(getCurrentSessionDuration() * 60))
 			return () => {}
 		}
 
+		// Calculate when the session should end
 		const stopTime = addMinutes(startTime, getCurrentSessionDuration())
-		console.log("Session started at:", startTime)
-		console.log("Expected stop time:", stopTime)
 
+		// Update countdown display every second
 		const updateCountdown = () => {
 			const remaining = differenceInSeconds(stopTime, new Date())
 			setRemainingTime(formatRemainingTime(remaining))
 		}
 
+		// Start countdown immediately and then every second
 		updateCountdown()
 		const intervalId = window.setInterval(updateCountdown, 1000)
+		
+		// Cleanup interval when component unmounts or dependencies change
 		return () => window.clearInterval(intervalId)
 	}, [isRunning, startTime])
 
@@ -188,17 +192,31 @@ const BleGUI: React.FC<BleGUIProps> = ({ triggerModalOpen }) => {
 	useEffect(() => {
 		if (!isRunning || !startTime) return () => {}
 
-		const checkStopTime = () => {
+		// Check if session should stop based on current time vs stop time
+		const checkStopTime = async () => {
 			const stopTime = addMinutes(startTime, getCurrentSessionDuration())
-			if (new Date() >= stopTime) {
-				handleDisconnect()
-				createSessionEndAlert()
+			const currentTime = new Date()
+			
+			// If current time has reached or passed the stop time, end the session
+			if (currentTime >= stopTime) {
+				try {
+					await handleDisconnect()
+					createSessionEndAlert()
+				} catch (error) {
+					console.error('Error during auto-stop:', error)
+					createSessionEndAlert()
+				}
 			}
 		}
 
-		const intervalId = setInterval(checkStopTime, 5000) // Check every 5 seconds
+		// Run check immediately and then every second for precise timing
+		checkStopTime()
+		const intervalId = setInterval(checkStopTime, 1000)
 
-		return () => clearInterval(intervalId)
+		// Cleanup interval when component unmounts or dependencies change
+		return () => {
+			clearInterval(intervalId)
+		}
 	}, [isRunning, startTime, playAlert, handleDisconnect, createSessionEndAlert])
 
 	// read the characteristics (which SMA firing, etc.) every 100ms
@@ -343,6 +361,33 @@ const BleGUI: React.FC<BleGUIProps> = ({ triggerModalOpen }) => {
 											(opt) => opt.value === sessionDuration,
 										)?.label || sessionDuration + " minutes"}
 									</span>
+								</div>
+
+								{/* Quick bypass for testing */}
+								<div className="flex flex-col space-y-2">
+									<Label className="text-sm font-medium text-muted-foreground">
+										Quick Test Duration:
+									</Label>
+									<div className="flex flex-wrap gap-2">
+										<Button
+											variant={sessionDuration === "1" ? "default" : "outline"}
+											size="sm"
+											onClick={() => handleSessionDurationChange("1")}
+											disabled={isRunning}
+											className="text-xs"
+										>
+											1 minute (Test)
+										</Button>
+										<Button
+											variant={sessionDuration === "30" ? "default" : "outline"}
+											size="sm"
+											onClick={() => handleSessionDurationChange("30")}
+											disabled={isRunning}
+											className="text-xs"
+										>
+											30 minutes
+										</Button>
+									</div>
 								</div>
 
 								<label className="flex items-center space-x-2 text-foreground">
