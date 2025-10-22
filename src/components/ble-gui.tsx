@@ -192,31 +192,18 @@ const BleGUI: React.FC<BleGUIProps> = ({ triggerModalOpen }) => {
 	useEffect(() => {
 		if (!isRunning || !startTime) return () => {}
 
-		// Check if session should stop based on current time vs stop time
-		const checkStopTime = async () => {
+		const checkStopTime = () => {
 			const stopTime = addMinutes(startTime, getCurrentSessionDuration())
-			const currentTime = new Date()
-			
-			// If current time has reached or passed the stop time, end the session
-			if (currentTime >= stopTime) {
-				try {
-					await handleDisconnect()
-					createSessionEndAlert()
-				} catch (error) {
-					console.error('Error during auto-stop:', error)
-					createSessionEndAlert()
-				}
+			if (new Date() >= stopTime) {
+				handleDisconnect()
+				createSessionEndAlert()
 			}
 		}
 
-		// Run check immediately and then every second for precise timing
 		checkStopTime()
-		const intervalId = setInterval(checkStopTime, 1000)
+		const intervalId = setInterval(checkStopTime, 5000)
 
-		// Cleanup interval when component unmounts or dependencies change
-		return () => {
-			clearInterval(intervalId)
-		}
+		return () => clearInterval(intervalId)
 	}, [isRunning, startTime, playAlert, handleDisconnect, createSessionEndAlert])
 
 	// read the characteristics (which SMA firing, etc.) every 100ms
