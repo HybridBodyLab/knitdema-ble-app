@@ -145,21 +145,27 @@ const BleGUI: React.FC<BleGUIProps> = ({ triggerModalOpen }) => {
 	//set calculate stop time
 	useEffect(() => {
 		if (!isRunning || !startTime) {
+			// Reset to full session duration when not running
 			setRemainingTime(formatRemainingTime(getCurrentSessionDuration() * 60))
 			return () => {}
 		}
 
+		// Calculate when the session should end
 		const stopTime = addMinutes(startTime, getCurrentSessionDuration())
 		console.log("Session started at:", startTime)
 		console.log("Expected stop time:", stopTime)
 
+		// Update countdown display every second
 		const updateCountdown = () => {
 			const remaining = differenceInSeconds(stopTime, new Date())
 			setRemainingTime(formatRemainingTime(remaining))
 		}
 
+		// Start countdown immediately and then every second
 		updateCountdown()
 		const intervalId = window.setInterval(updateCountdown, 1000)
+		
+		// Cleanup interval when component unmounts or dependencies change
 		return () => window.clearInterval(intervalId)
 	}, [isRunning, startTime])
 
@@ -183,6 +189,14 @@ const BleGUI: React.FC<BleGUIProps> = ({ triggerModalOpen }) => {
 		window.location.reload()
 	}, [playAlert, notificationSound])
 
+	// Use refs to store the latest function versions
+	const handleDisconnectRef = useRef(handleDisconnect)
+	const createSessionEndAlertRef = useRef(createSessionEndAlert)
+
+	// Update refs immediately when functions change
+	handleDisconnectRef.current = handleDisconnect
+	createSessionEndAlertRef.current = createSessionEndAlert
+
 	// when a new start time is set, set a timeout to disconnect and create an alert
 	// run one time at the start of the session
 	useEffect(() => {
@@ -191,15 +205,17 @@ const BleGUI: React.FC<BleGUIProps> = ({ triggerModalOpen }) => {
 		const checkStopTime = () => {
 			const stopTime = addMinutes(startTime, getCurrentSessionDuration())
 			if (new Date() >= stopTime) {
-				handleDisconnect()
-				createSessionEndAlert()
+				console.log("disconnecting")
+				handleDisconnectRef.current()
+				createSessionEndAlertRef.current()
 			}
 		}
 
-		const intervalId = setInterval(checkStopTime, 5000) // Check every 5 seconds
+		checkStopTime()
+		const intervalId = setInterval(checkStopTime, 5000)
 
 		return () => clearInterval(intervalId)
-	}, [isRunning, startTime, playAlert, handleDisconnect, createSessionEndAlert])
+	}, [isRunning, startTime])
 
 	// read the characteristics (which SMA firing, etc.) every 100ms
 	useEffect(() => {
